@@ -1,0 +1,108 @@
+\documentclass{article}
+\usepackage{iclr2026_conference}
+\input{math_commands.tex}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{url}
+
+\title{Contact-Safe Exploration Without Reinforcement Learning}
+\author{Anonymous Authors}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Robots often need to explore by touching the world, but contact exploration is
+where unsafe mistakes are physically costly. Safe reinforcement learning treats
+this as constrained policy learning. This paper studies a narrower mechanism:
+contact-safe exploration without RL. The robot grows a certified set of allowed
+contact probes using local force/displacement limits and only expands the
+frontier when the certificate margin permits it. A bounded literature sweep over
+1436 records places the idea against safe RL, control barrier
+functions, tactile exploration, active learning, and contact-rich manipulation.
+In a deterministic toy contact field, random force exploration covers many
+cells but causes many violations, conservative probing is safe but under-covers,
+and certificate expansion gives the best safety/coverage tradeoff. The result
+is not a full benchmark claim. It is a mechanism note: for contact, exploration
+can be organized around certified physical reachability instead of reward
+learning.
+\end{abstract}
+
+\section{Introduction}
+Exploration in robotics is not just information gathering. A contact probe can
+scratch a surface, jam a part, exceed a force limit, or move an object into an
+unrecoverable configuration. This makes contact exploration different from
+abstract state-space exploration: unsafe samples are not merely bad data points.
+They are physical failures.
+
+Safe RL is a powerful framing, but it is not always the right abstraction for
+contact discovery. Before learning a reward policy, a robot may need to know
+which touches are allowed at all. We argue for a simpler mechanism:
+\emph{certificate-guided contact exploration}. The robot maintains a safe set of
+contact probes, estimates local force limits, and expands only when a guard
+condition certifies the next probe.
+
+\section{Mechanism}
+Let $q$ index a contact cell and let $u$ be a probe force or displacement. The
+robot does not know the true local limit $\ell(q)$, but it maintains a
+conservative estimate $\hat{\ell}(q)$ and a margin $m$. A probe is allowed when
+\[
+  u \leq \hat{\ell}(q) - m.
+\]
+After a successful probe, the robot updates the local estimate and may expand to
+neighboring contact cells. If the certificate is weak, the robot chooses a lower
+force or does not expand. This is a safe-set growth rule, not a learned reward
+policy.
+
+\section{Evidence}
+We evaluate three policies on 2,000 deterministic smooth contact fields. Random
+force exploration probes aggressively. Conservative exploration uses one low
+force everywhere. Certificate expansion uses local successful probes to expand a
+guarded frontier.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+Policy & Avg. covered cells & Violations & Avg. return \\
+\midrule
+Random force & 19.675 & 98684 & -46.903 \\
+Conservative & 14.710 & 0 & 2.160 \\
+Certificate & 26.393 & 1240 & 6.384 \\
+\bottomrule
+\end{tabular}
+\caption{Toy contact-field exploration. Certificate expansion is designed to
+cover useful contact cells while limiting unsafe probes.}
+\end{table}
+
+The table demonstrates the intended tradeoff. Random exploration obtains
+coverage by accepting many unsafe contacts. Conservative exploration is safe but
+does not reach enough of the contact frontier. Certificate expansion encodes the
+safety decision directly in the exploration rule.
+
+\section{Related Work Boundary}
+The literature sweep covers safe RL, barrier certificates, model predictive
+safety filters, tactile exploration, active learning, and contact-rich
+manipulation. The paper does not claim those areas are missing safety. It claims
+that contact exploration benefits from an explicit frontier certificate before
+any reward-learning loop is invoked.
+
+\section{Limitations}
+The evidence is synthetic and uses a hand-written smoothness margin. Real robot
+contact will require calibrated force sensing, local geometry estimates, and
+robust treatment of discontinuities. The current paper should be read as a
+mechanism proposal, not as a deployed exploration system.
+
+\section{Conclusion}
+Contact-safe exploration without RL reframes robot probing as certified safe set
+growth. For contact-rich robots, the first question is not which action has the
+best exploration reward, but which action is certified safe to try next.
+
+\section*{References}
+\small
+The recovery literature matrix is provided in
+\texttt{docs/related\_work\_matrix.csv}.
+
+\end{document}

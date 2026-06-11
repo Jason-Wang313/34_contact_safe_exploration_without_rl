@@ -1,0 +1,4 @@
+policy,avg_covered_cells,total_violations,avg_return
+random_force,19.675,98684,-46.903
+conservative,14.710,0,2.160
+certificate,26.393,1240,6.384
