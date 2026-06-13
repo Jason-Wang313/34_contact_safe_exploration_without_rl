@@ -23,11 +23,19 @@ frontier when the certificate margin permits it. A bounded literature sweep over
 functions, tactile exploration, active learning, and contact-rich manipulation.
 In a deterministic toy contact field, random force exploration covers many
 cells but causes many violations, conservative probing is safe but under-covers,
-and certificate expansion gives the best safety/coverage tradeoff. The result
-is not a full benchmark claim. It is a mechanism note: for contact, exploration
-can be organized around certified physical reachability instead of reward
-learning.
+and certificate expansion gives the best safety/coverage tradeoff under a
+smooth-limit assumption. A v2 discontinuity stress shows the boundary: brittle
+low-limit pockets increase certificate violations enough that conservative
+probing wins under a high-harm safety score. The result is not a full benchmark
+claim. It is a mechanism note: for contact, exploration can be organized around
+certified physical reachability instead of reward learning when the certificate
+assumptions are calibrated.
 \end{abstract}
+
+\paragraph{V2 hardening note.}
+This version narrows the claim. Certificate-guided contact exploration is not a
+free substitute for safe RL or hardware validation. It is supported only when
+local contact-limit smoothness and violation harm are calibrated.
 
 \section{Introduction}
 Exploration in robotics is not just information gathering. A contact probe can
@@ -53,7 +61,9 @@ conservative estimate $\hat{\ell}(q)$ and a margin $m$. A probe is allowed when
 After a successful probe, the robot updates the local estimate and may expand to
 neighboring contact cells. If the certificate is weak, the robot chooses a lower
 force or does not expand. This is a safe-set growth rule, not a learned reward
-policy.
+policy. The guard implicitly assumes that nearby contact cells have comparable
+limits. When contact limits contain brittle discontinuities, the certificate can
+be overconfident.
 
 \section{Evidence}
 We evaluate three policies on 2,000 deterministic smooth contact fields. Random
@@ -82,6 +92,18 @@ coverage by accepting many unsafe contacts. Conservative exploration is safe but
 does not reach enough of the contact frontier. Certificate expansion encodes the
 safety decision directly in the exploration rule.
 
+\subsection{V2 discontinuity stress}
+The hostile reviewer attack is that the toy certificate is a hand-written
+smoothness margin. We therefore add brittle low-limit pockets that break the
+neighbor-smoothness assumption. Table~\ref{tab:discontinuous-contact-stress}
+shows that the certificate still covers more cells, but it now causes 3974
+violations. If each unsafe contact is priced at five covered-cell units,
+conservative probing scores 22.726 while certificate expansion scores 22.356.
+This is a negative boundary: the method needs calibrated discontinuity handling
+and harm weighting.
+
+\input{docs/contact_discontinuity_stress_table.tex}
+
 \section{Related Work Boundary}
 The literature sweep covers safe RL, barrier certificates, model predictive
 safety filters, tactile exploration, active learning, and contact-rich
@@ -92,8 +114,10 @@ any reward-learning loop is invoked.
 \section{Limitations}
 The evidence is synthetic and uses a hand-written smoothness margin. Real robot
 contact will require calibrated force sensing, local geometry estimates, and
-robust treatment of discontinuities. The current paper should be read as a
-mechanism proposal, not as a deployed exploration system.
+robust treatment of discontinuities. The v2 stress shows that if discontinuities
+are common or unsafe contacts are expensive, conservative probing can be the
+better policy. The current paper should be read as a mechanism proposal, not as
+a deployed exploration system.
 
 \section{Conclusion}
 Contact-safe exploration without RL reframes robot probing as certified safe set

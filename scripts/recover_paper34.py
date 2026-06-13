@@ -3,6 +3,7 @@ import math
 import random
 import re
 import shutil
+import sys
 import time
 from pathlib import Path
 
@@ -138,6 +139,15 @@ def threshold_field(seed, cells=72):
     return field
 
 
+def discontinuous_field(seed, cells=72, drop_probability=0.14, low_limit=0.20):
+    field = threshold_field(seed, cells)
+    rng = random.Random(34000 + seed)
+    for i in range(cells):
+        if rng.random() < drop_probability:
+            field[i] = min(field[i], low_limit + rng.random() * 0.04)
+    return field
+
+
 def eval_random(field, rng):
     covered = set()
     violations = 0
@@ -205,6 +215,83 @@ def eval_certificate(field, rng):
                 violations += 1
                 reward -= 0.75
     return len(covered), violations, reward
+
+
+def summarize_policy_totals(totals, seeds=2000, harm_weight=5.0):
+    rows = []
+    for policy in ["random_force", "conservative", "certificate"]:
+        avg_covered = totals[policy]["coverage"] / float(seeds)
+        violations_per_seed = totals[policy]["violations"] / float(seeds)
+        rows.append(
+            {
+                "policy": policy,
+                "avg_covered_cells": f"{avg_covered:.3f}",
+                "total_violations": totals[policy]["violations"],
+                "violations_per_seed": f"{violations_per_seed:.3f}",
+                "harm5_utility": f"{avg_covered - harm_weight * violations_per_seed:.3f}",
+            }
+        )
+    return rows
+
+
+def write_discontinuity_stress_table(rows):
+    labels = {
+        "random_force": "Random force",
+        "conservative": "Conservative",
+        "certificate": "Certificate",
+    }
+    body = []
+    for row_data in rows:
+        body.append(
+            f"{labels[row_data['policy']]} & {row_data['avg_covered_cells']} & "
+            f"{row_data['total_violations']} & {row_data['violations_per_seed']} & "
+            f"{row_data['harm5_utility']} \\\\"
+        )
+    table = (
+        "\\begin{table}[h]\n"
+        "\\centering\n"
+        "\\small\n"
+        "\\begin{tabular}{lrrrr}\n"
+        "\\toprule\n"
+        "Policy & Avg. covered & Violations & Viol./seed & Harm-5 utility \\\\\n"
+        "\\midrule\n"
+        + "\n".join(body)
+        + "\n\\bottomrule\n"
+        "\\end{tabular}\n"
+        "\\caption{V2 discontinuous-contact stress. The contact field contains "
+        "brittle low-limit pockets that violate the smooth-neighbor assumption. "
+        "Certificate expansion still covers more cells, but its violation rate "
+        "makes conservative probing preferable when each unsafe contact is priced "
+        "at five covered-cell units.}\n"
+        "\\label{tab:discontinuous-contact-stress}\n"
+        "\\end{table}\n"
+    )
+    (DOCS / "contact_discontinuity_stress_table.tex").write_text(table, encoding="utf-8")
+
+
+def run_discontinuity_stress():
+    policies = ["random_force", "conservative", "certificate"]
+    totals = {p: {"coverage": 0, "violations": 0, "return": 0.0} for p in policies}
+    for seed in range(2000):
+        field = discontinuous_field(seed)
+        rng = random.Random(seed + 991)
+        for policy, fn in [
+            ("random_force", lambda: eval_random(field, rng)),
+            ("conservative", lambda: eval_conservative(field)),
+            ("certificate", lambda: eval_certificate(field, rng)),
+        ]:
+            cov, vio, ret = fn()
+            totals[policy]["coverage"] += cov
+            totals[policy]["violations"] += vio
+            totals[policy]["return"] += ret
+
+    rows = summarize_policy_totals(totals)
+    with (DOCS / "contact_discontinuity_stress.csv").open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    write_discontinuity_stress_table(rows)
+    return rows
 
 
 def run_toy():
@@ -513,4 +600,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--stress-only" in sys.argv:
+        run_discontinuity_stress()
+    else:
+        main()

@@ -1,0 +1,4 @@
+policy,avg_covered_cells,total_violations,violations_per_seed,harm5_utility
+random_force,18.363,106375,53.188,-247.575
+conservative,22.726,0,0.000,22.726
+certificate,32.291,3974,1.987,22.356
