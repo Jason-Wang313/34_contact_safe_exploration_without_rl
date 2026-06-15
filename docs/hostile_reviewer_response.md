@@ -2,17 +2,19 @@
 
 ## Likely Rejection
 
-This is a hand-written smoothness certificate in a toy contact field. Safe RL and barrier certificates already exist, and the method may become unsafe when contact limits are discontinuous.
+This is still synthetic. Safe RL, CBFs, MPC safety filters, and tactile exploration already cover parts of safety-aware contact exploration. The suite uses stylized expected rollouts rather than hardware force logs.
 
 ## Honest Response
 
-We agree. The contribution is not a full safe-exploration algorithm, a hardware result, or a universal safety guarantee. It is a mechanism note: for contact exploration, a robot can sometimes grow a certified safe frontier without learning a reward policy.
+We agree that the paper is not a hardware validation. The contribution is a full-scale synthetic mechanism study: it isolates contact-safe frontier growth and shows why certificates must expose calibration, uncertainty, discontinuity, stop-latency, and harm assumptions.
 
-The v2 stress quantifies the boundary. In brittle discontinuous fields, certificate expansion covers 32.291 cells but incurs 3974 unsafe contacts. Under harm-5 scoring, conservative probing beats it, 22.726 to 22.356. The paper should claim calibrated certificate growth only.
+The v3 evidence is much broader than the v2 note. It covers 10 families, 12 regimes, 14 policies, 96 seeds, and 123,863,040 represented candidate decisions. It includes random force, conservative probing, fixed/adaptive certificates, Lipschitz and interval filters, CBF-style and MPC-style filters, safe active learning, tactile gradients, discontinuity detection, oracle limits, and overconfident negative controls.
 
-## Required Upgrade For Main-Track Submission
+The claim is deliberately bounded. Fixed certificates are not presented as a final hardware safety system. The useful policies are the ones that make the certificate inspectable and calibrated; the overconfident negative control shows that certificate language can be unsafe when assumptions are hidden.
 
-- Calibrate contact-limit smoothness on hardware or high-fidelity simulation.
-- Add discontinuity detection or fallback conservative probing.
-- Compare against CBF, safe RL, model-predictive safety-filter, and tactile active-learning baselines.
-- Report safety/coverage tradeoffs under multiple unsafe-contact harm weights.
+## Required Upgrade For Hardware Evidence
+
+- Calibrate contact-limit smoothness, force sensing, stop latency, anisotropy, friction, and deformation on hardware.
+- Add measured discontinuity detection and conservative fallback.
+- Compare against real CBF, safe RL, MPC safety-filter, and tactile active-learning implementations.
+- Report raw contact logs, high-harm events, operator overrides, and videos of representative successes and failures.

@@ -1,0 +1,30 @@
+{
+  "version": "v3 final full-scale",
+  "final_pdf": "C:/Users/wangz/Downloads/34.pdf",
+  "final_pdf_pages": 25,
+  "final_pdf_size_bytes": 301379,
+  "final_pdf_sha256": "9243DFAC7F540DE2EED48E9FAFA89318B23030224572AE6912EC952EDCA19548",
+  "local_paper_pdf_present_after_build": false,
+  "build_status": "complete",
+  "build_log_serious_warning_count": 0,
+  "text_markers_verified": [
+    "v3 final full-scale",
+    "123,863,040",
+    "MPC-style",
+    "341.2",
+    "417.8"
+  ],
+  "visual_render_verified": true,
+  "visual_render_method": "Rendered the final Downloads PDF with pdftoppm at 90 dpi and inspected all pages through contact sheets.",
+  "experiment_scale": {
+    "families": 10,
+    "regimes": 12,
+    "policies": 14,
+    "seeds": 96,
+    "cells": 192,
+    "candidate_probes_per_cell": 4,
+    "represented_candidate_probe_decisions": 123863040,
+    "seed_rows": 161280,
+    "aggregate_rows": 1680
+  }
+}
