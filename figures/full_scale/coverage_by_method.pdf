@@ -1,0 +1,54 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 470 260] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 1114 >>
+stream
+BT /F1 12 Tf 28.0 240.0 Td (Coverage and utility by contact-safe policy) Tj ET
+0.12 0.12 0.12 RG 0.8 w 45.0 42.0 m 420.0 42.0 l S
+0.12 0.12 0.12 RG 0.8 w 45.0 42.0 m 45.0 220.0 l S
+0.840 0.300 0.240 rg 54.0 42.0 34.0 39.1 re f
+BT /F1 7 Tf 49.0 27.0 Td (random force) Tj ET
+BT /F1 8 Tf 53.0 88.1 Td (157) Tj ET
+0.890 0.610 0.180 rg 104.0 42.0 34.0 22.0 re f
+BT /F1 7 Tf 99.0 27.0 Td (uniform low f) Tj ET
+BT /F1 8 Tf 103.0 71.0 Td (120) Tj ET
+0.500 0.500 0.580 rg 154.0 42.0 34.0 62.9 re f
+BT /F1 7 Tf 149.0 27.0 Td (fixed margin ) Tj ET
+BT /F1 8 Tf 153.0 111.9 Td (208) Tj ET
+0.240 0.630 0.450 rg 204.0 42.0 34.0 100.5 re f
+BT /F1 7 Tf 199.0 27.0 Td (adaptive marg) Tj ET
+BT /F1 8 Tf 203.0 149.5 Td (290) Tj ET
+0.240 0.560 0.740 rg 254.0 42.0 34.0 124.5 re f
+BT /F1 7 Tf 249.0 27.0 Td (mpc safety fi) Tj ET
+BT /F1 8 Tf 253.0 173.5 Td (341) Tj ET
+0.200 0.550 0.550 rg 304.0 42.0 34.0 90.7 re f
+BT /F1 7 Tf 299.0 27.0 Td (discontinuity) Tj ET
+BT /F1 8 Tf 303.0 139.7 Td (268) Tj ET
+0.480 0.350 0.680 rg 354.0 42.0 34.0 160.0 re f
+BT /F1 7 Tf 349.0 27.0 Td (oracle limit ) Tj ET
+BT /F1 8 Tf 353.0 209.0 Td (418) Tj ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+1477
+%%EOF

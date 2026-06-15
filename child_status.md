@@ -1,23 +1,32 @@
 # Child Status 34
 
-Status: v2 hardened by orchestrator
+Status: v3 final full-scale submission-hardened
 Original child attempts: 2
 Original failure cause: child attempts failed during early status/plan patching and produced no usable paper artifacts.
 
 Recovery end time: 2026-06-11 23:31:00 +01:00
 V2 hardening time: 2026-06-13 07:04:05 +01:00
-Recovery and hardening actions:
-- Generated bounded Crossref literature matrix.
-- Generated deterministic contact-safe exploration benchmark.
-- Generated required docs and `main.tex`.
-- Compiled `main.tex` twice with `pdflatex -interaction=nonstopmode -halt-on-error`.
-- Added v2 discontinuous-contact stress in `scripts/recover_paper34.py`.
-- Generated `docs/contact_discontinuity_stress.csv` and `docs/contact_discontinuity_stress_table.tex`.
-- Added `scripts/build_pdf.ps1` to copy only to `C:\Users\wangz\Downloads\34.pdf` and remove local `main.pdf`.
-- Removed stale Desktop-artifact language from the audit trail.
+V3 full-scale hardening time: 2026-06-15
 
-PDF exists: True
-Downloads PDF: C:\Users\wangz\Downloads\34.pdf
-Desktop PDF: absent
-Local paper PDF: absent after v2 build
-GitHub URL: https://github.com/Jason-Wang313/34_contact_safe_exploration_without_rl
+## Final Actions
+
+- Wrote `docs/full_scale_execution_plan.md` before substantive v3 edits.
+- Added `scripts/run_full_scale_contact_safe_suite.py`.
+- Ran the full-scale suite: 10 contact-field families, 12 regimes, 14 policies, 96 seeds, 192 cells, 4 candidate probes per cell, and 123,863,040 represented candidate probe decisions.
+- Generated seed metrics, aggregate metrics, summary JSON, representative trace, table snippets, and vector figures under `results/full_scale/` and `figures/full_scale/`.
+- Rewrote `main.tex` as a v3 final full-scale manuscript with adaptive certificates, Lipschitz and interval filters, CBF-style and MPC-style safety filters, safe active learning, tactile gradients, discontinuity detection, oracle limits, negative controls, hardware protocols, and extended appendices.
+- Compiled with the canonical build script and copied only the final PDF to `C:/Users/wangz/Downloads/34.pdf`.
+- Removed local `main.pdf` after the canonical copy.
+- Verified final PDF text contains `v3 final full-scale`, `123,863,040`, `MPC-style`, `341.2`, and `417.8`.
+- Rendered the final Downloads PDF with `pdftoppm` and inspected all 25 pages through contact sheets; no clipping, table spillover, broken figures, or unreadable references were observed.
+- Verified serious build-log scan has no overfull boxes, unresolved references, undefined citations, fatal errors, or TeX error lines.
+
+## Final PDF
+
+- Downloads PDF: `C:/Users/wangz/Downloads/34.pdf`
+- Pages: 25
+- Size: 301,379 bytes
+- SHA256: `9243DFAC7F540DE2EED48E9FAFA89318B23030224572AE6912EC952EDCA19548`
+- Desktop PDF: absent
+- Local paper PDF: absent after final build
+- GitHub URL: `https://github.com/Jason-Wang313/34_contact_safe_exploration_without_rl`

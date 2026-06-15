@@ -1,5 +1,16 @@
 # Submission Version Log
 
+## v3 - 2026-06-15
+
+- Wrote `docs/full_scale_execution_plan.md` before substantive v3 edits.
+- Added `scripts/run_full_scale_contact_safe_suite.py`, a RAM-light standard-library full-scale experiment runner.
+- Ran a 10-family, 12-regime, 14-policy, 96-seed suite representing 123,863,040 candidate contact-probe decisions.
+- Generated `results/full_scale/seed_metrics.csv`, `aggregate_metrics.csv`, `experiment_summary.json`, `representative_trace.csv`, table snippets, and validation notes.
+- Generated vector figures under `figures/full_scale/`.
+- Rewrote `main.tex` as a 25-page v3 final full-scale manuscript with adaptive certificates, safety filters, oracle gaps, negative controls, hardware protocols, deployment checklists, and extended appendices.
+- Built the canonical PDF at `C:/Users/wangz/Downloads/34.pdf` and removed local `main.pdf`.
+- Verified final PDF page count, hash, text markers, build logs, and visual rendering.
+
 ## v2 - 2026-06-13
 
 - Added discontinuous-contact stress generation to `scripts/recover_paper34.py`.

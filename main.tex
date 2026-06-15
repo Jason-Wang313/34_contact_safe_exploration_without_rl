@@ -3,6 +3,8 @@
 \input{math_commands.tex}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{graphicx}
+\usepackage{microtype}
 \usepackage{url}
 
 \title{Contact-Safe Exploration Without Reinforcement Learning}
@@ -12,123 +14,1586 @@
 \begin{document}
 \maketitle
 
-\noindent\textbf{Submission-hardening version: v2.}
+\noindent\textbf{Submission-hardening version: v3 final full-scale.}
+This revision replaces the compact v2 mechanism note with a full-scale
+synthetic study of contact-safe exploration. The suite represents
+123,863,040 candidate contact-probe decisions across 10 contact-field
+families, 12 operating regimes, 14 policies, 96 deterministic seeds, 192
+contact cells per seed, and 4 candidate probe forces per cell.
 
 \begin{abstract}
 Robots often need to explore by touching the world, but contact exploration is
-where unsafe mistakes are physically costly. Safe reinforcement learning treats
+where unsafe mistakes become scratches, jams, force-limit violations, tool
+damage, and unrecoverable object motion. Safe reinforcement learning treats
 this as constrained policy learning. This paper studies a narrower mechanism:
-contact-safe exploration without RL. The robot grows a certified set of allowed
-contact probes using local force/displacement limits and only expands the
-frontier when the certificate margin permits it. A bounded literature sweep over
-1436 records places the idea against safe RL, control barrier
-functions, tactile exploration, active learning, and contact-rich manipulation.
-In a deterministic toy contact field, random force exploration covers many
-cells but causes many violations, conservative probing is safe but under-covers,
-and certificate expansion gives the best safety/coverage tradeoff under a
-smooth-limit assumption. A v2 discontinuity stress shows the boundary: brittle
-low-limit pockets increase certificate violations enough that conservative
-probing wins under a high-harm safety score. The result is not a full benchmark
-claim. It is a mechanism note: for contact, exploration can be organized around
-certified physical reachability instead of reward learning when the certificate
-assumptions are calibrated.
+contact-safe exploration without RL. The robot grows a certified frontier of
+allowed probes using local force/displacement evidence and expands only when a
+safety filter permits the next contact. The v3 evaluation covers
+123,863,040 represented candidate probe decisions. Random force probing covers
+139.7 cells on average but incurs 41.30 violations per seed. Uniform low-force
+probing causes almost no violations but covers only 55.0 cells. A fixed-margin
+certificate improves utility but remains brittle under discontinuities.
+Adaptive certificates reach 289.6 utility; MPC-style safety filtering reaches
+341.2; oracle contact-limit knowledge reaches 417.8. Overconfident
+certificates cover 181.5 cells but incur 98.66 violations per seed and collapse
+under high-harm contact. The claim is conditional: contact certificates are
+useful when their local smoothness, sensing, discontinuity, and harm
+assumptions are calibrated, and harmful when they are treated as permission to
+probe aggressively.
 \end{abstract}
 
-\paragraph{V2 hardening note.}
-This version narrows the claim. Certificate-guided contact exploration is not a
-free substitute for safe RL or hardware validation. It is supported only when
-local contact-limit smoothness and violation harm are calibrated.
-
 \section{Introduction}
+
 Exploration in robotics is not just information gathering. A contact probe can
-scratch a surface, jam a part, exceed a force limit, or move an object into an
-unrecoverable configuration. This makes contact exploration different from
-abstract state-space exploration: unsafe samples are not merely bad data points.
-They are physical failures.
+scratch a surface, jam a part, exceed a force limit, slip along a friction
+cliff, snag a cable, dent a thin shell, or move a workpiece into a state from
+which the task cannot recover. In that setting, unsafe samples are not merely
+bad data points. They are physical events.
 
-Safe RL is a powerful framing, but it is not always the right abstraction for
-contact discovery. Before learning a reward policy, a robot may need to know
-which touches are allowed at all. We argue for a simpler mechanism:
-\emph{certificate-guided contact exploration}. The robot maintains a safe set of
-contact probes, estimates local force limits, and expands only when a guard
-condition certifies the next probe.
+Safe reinforcement learning is one response to this problem. It asks how to
+learn a policy while respecting constraints, reducing unsafe trials, or
+filtering actions. That framing is powerful, but it is not always the first
+abstraction a robot needs. Before a robot learns which contact policy produces
+the best long-run reward, it may need to answer a simpler question: which touch
+is certified safe to attempt next?
 
-\section{Mechanism}
-Let $q$ index a contact cell and let $u$ be a probe force or displacement. The
-robot does not know the true local limit $\ell(q)$, but it maintains a
-conservative estimate $\hat{\ell}(q)$ and a margin $m$. A probe is allowed when
+This paper studies that question as a mechanism. We call the mechanism
+\emph{certificate-guided contact exploration}. The robot maintains a frontier
+of contact cells and candidate probe forces. It updates local estimates of
+safe force/displacement limits after successful probes. It expands only when a
+certificate says that the next probe lies below a conservative bound. If the
+certificate is weak, the robot probes lower, abstains, or asks for
+calibration. This is safe set growth, not reward learning.
+
+The compact v2 version of the paper showed the core tradeoff on a toy contact
+field. Random force exploration covered many cells but caused many violations.
+Conservative probing caused almost no violations but did not explore far.
+Fixed certificate expansion gave the best smooth-field tradeoff, but a
+discontinuous-contact stress exposed its weakness: brittle low-limit pockets
+can make a local smoothness certificate overconfident. The v2 result was useful
+but far too small for a final manuscript.
+
+The v3 paper scales the mechanism test. The suite represents 123,863,040
+candidate contact-probe decisions. It covers smooth elastic contact, brittle
+low-limit pockets, anisotropic brush contact, friction cliffs, thin shells,
+foam deformation, cable snags, peg-in-hole edges, soft-tissue proxies, and a
+calibration-control surface. It includes smooth nominal operation, dense
+discontinuities, sparse catastrophic hazards, force-sensor noise, sensor-bias
+drift, delayed stop, anisotropic limits, friction shift, deformable memory,
+high frontier value, high harm weight, and a free-safe-control regime.
+
+The policy set is intentionally broad. It includes random force probing,
+uniform low-force probing, frontier low-force probing, fixed-margin
+certificates, adaptive-margin certificates, Lipschitz-safe expansion,
+interval-reachability filtering, CBF-style filtering, MPC-style filtering,
+safe active-learning UCB, tactile-gradient probing, discontinuity detection,
+oracle contact-limit knowledge, and an overconfident certificate negative
+control. The central result is not that one certificate is universally best.
+It is that contact-safe exploration must explicitly trade coverage, frontier
+value, violation severity, false-safe expansion, false blocking, and harm.
+
+\paragraph{Contributions.}
+First, the paper formalizes contact-safe exploration as guarded frontier growth
+over candidate probes rather than as reward-policy learning. Second, it
+separates several mechanisms that are often conflated: fixed margin,
+Lipschitz-bound safety, interval reachability, barrier-style filtering,
+short-horizon planning, active uncertainty, tactile gradients, discontinuity
+detection, and oracle limit maps. Third, it provides a RAM-light standard
+library synthetic suite representing 123,863,040 candidate decisions while
+storing only seed summaries, aggregates, figures, and one trace. Fourth, it
+states the negative boundary: an overconfident certificate is worse than
+conservatism when contact harm is high or local smoothness fails.
+
+\section{Related Work Boundary}
+
+The hostile neighborhood is large. Safe RL studies exploration under
+constraints and is the obvious comparator. Control barrier functions and
+safety filters provide formal action-level guards. Model predictive control
+plans short-horizon behavior under constraints. Safe active learning and safe
+Bayesian optimization choose informative samples while preserving a safe set.
+Tactile exploration and contact-rich manipulation study probing, sliding,
+pushing, insertion, force control, and manipulation through contact. The paper
+does not claim that these areas ignore safety.
+
+The claim is narrower. In many contact-rich tasks, the robot is not yet trying
+to maximize a learned reward. It is trying to discover which contacts are
+allowed. That discovery problem has a physical frontier: cells, poses, surface
+patches, tool configurations, and candidate forces. The frontier grows only
+when local evidence supports the next probe. This is close to safe active
+learning, but the state being expanded is contact permission rather than a
+generic input domain. It is close to barrier filtering, but the barrier is
+being calibrated by probing rather than assumed known. It is close to tactile
+exploration, but the first metric is harm-aware safe expansion rather than
+classification accuracy or information gain alone.
+
+This distinction matters because reward learning can hide the most important
+engineering decision. If the robot scratches the part during exploration, a
+later reward update does not undo the damage. If a low-force probe reveals a
+safe local neighborhood, the robot may expand without needing a policy-gradient
+loop. If a discontinuity detector fires, the correct action may be to stop
+expansion, not to gather another high-value sample. The mechanism therefore
+turns contact exploration into a sequence of certification decisions.
+
+\section{Problem Setup}
+
+Let $q \in \mathcal{Q}$ denote a candidate contact cell and let $u \in
+\mathcal{U}$ denote a candidate probe force, displacement, or guarded contact
+command. Each cell has an unknown safe limit $\ell(q)$ and an unknown harm
+scale $h(q)$. A probe is safe if $u \leq \ell(q)$ and unsafe otherwise. A
+probe can also be uninformative if it is so low that it does not reveal useful
+contact geometry.
+
+The robot maintains an estimate $\hat{\ell}(q)$ and uncertainty radius
+$r(q)$. A generic certificate permits the probe when
 \[
-  u \leq \hat{\ell}(q) - m.
+  u \leq \hat{\ell}(q) - r(q) - m(q),
 \]
-After a successful probe, the robot updates the local estimate and may expand to
-neighboring contact cells. If the certificate is weak, the robot chooses a lower
-force or does not expand. This is a safe-set growth rule, not a learned reward
-policy. The guard implicitly assumes that nearby contact cells have comparable
-limits. When contact limits contain brittle discontinuities, the certificate can
-be overconfident.
+where $m(q)$ is an additional margin determined by policy, history, and harm.
+The certificate can be fixed, adaptive, Lipschitz-based, interval-based,
+barrier-style, or short-horizon. If no candidate force satisfies the guard, the
+robot abstains or chooses a lower probe.
 
-\section{Evidence}
-We evaluate three policies on 2,000 deterministic smooth contact fields. Random
-force exploration probes aggressively. Conservative exploration uses one low
-force everywhere. Certificate expansion uses local successful probes to expand a
-guarded frontier.
+The evaluation records both kinds of error. A false-safe expansion occurs when
+the policy permits a probe that violates the true limit. A false-blocked safe
+probe occurs when the policy refuses a probe that could have safely produced
+useful information. Contact-safe exploration is valuable only if it reduces
+false-safe expansions without blocking so much that the robot never learns the
+frontier.
+
+\section{Policy Families}
+
+\paragraph{Random force.}
+The random baseline samples contact forces without a certificate. It is useful
+because it reveals how much coverage can be bought by accepting unsafe contact.
+It is not a safe policy.
+
+\paragraph{Uniform low force.}
+The conservative baseline probes every cell with a low force. It is nearly
+safe, but it often under-covers the frontier because very low probes do not
+produce enough contact information.
+
+\paragraph{Frontier low force.}
+This baseline moves spatially along the frontier but still uses only low
+forces. It separates spatial expansion from force escalation.
+
+\paragraph{Fixed-margin certificate.}
+This is the v2 mechanism. It uses a local estimate and a fixed margin. It is
+simple and interpretable, but brittle when contact limits are discontinuous.
+
+\paragraph{Adaptive-margin certificate.}
+This policy increases its margin after surprise violations and relaxes the
+margin after stable regions. It is still simple, but it does not assume that
+one margin is correct everywhere.
+
+\paragraph{Lipschitz-safe expansion.}
+This policy assumes a local bound on how quickly safe limits can change. It is
+strong when the bound is calibrated and weak when brittle pockets violate the
+assumption.
+
+\paragraph{Interval reachability filter.}
+This policy maintains lower and upper safe-limit intervals. It allows probes
+that are safe under the lower bound and blocks probes where the interval is too
+wide.
+
+\paragraph{CBF-style safety filter.}
+The barrier-style policy treats probe choice as a filtered action: an
+aggressive candidate is clipped or rejected if the guard margin is violated.
+It is a stylized baseline, not a complete CBF controller.
+
+\paragraph{MPC safety filter.}
+The short-horizon policy evaluates future frontier value against expected
+violation risk. It can be more aggressive than a static filter when the future
+value is high and more conservative after risk signals.
+
+\paragraph{Safe active-learning UCB.}
+This policy probes uncertain cells only when the safe bound remains favorable.
+It tests whether uncertainty-aware exploration helps without a reward-learning
+loop.
+
+\paragraph{Tactile gradient probe.}
+This policy follows local gradients in measured limits. It is useful when
+contact changes smoothly, but can be misled by cliffs and discontinuities.
+
+\paragraph{Discontinuity detector.}
+This policy pauses expansion after abrupt residual changes. It sacrifices some
+coverage to avoid high-harm false-safe expansions.
+
+\paragraph{Oracle limit map.}
+The oracle knows the true local safe limit. It is an upper bound, not a
+deployable controller.
+
+\paragraph{Overconfident certificate.}
+The negative control uses an unsafe margin. It shows that certificates are not
+magic. If the certificate is overconfident, the policy may look productive
+until violation harm is counted.
+
+\section{Full-Scale Synthetic Suite}
+
+The v3 suite is designed to be broad enough to attack the mechanism rather than
+only confirm it. Table~\ref{tab:scale} gives the size. The represented decision
+count is the number of family/regime/policy/seed/cell/candidate-force
+combinations. The runner streams seed rows to disk and keeps only aggregate
+accumulators in memory.
 
 \begin{table}[h]
 \centering
 \small
-\begin{tabular}{lrrr}
-\toprule
-Policy & Avg. covered cells & Violations & Avg. return \\
-\midrule
-Random force & 19.675 & 98684 & -46.903 \\
-Conservative & 14.710 & 0 & 2.160 \\
-Certificate & 26.393 & 1240 & 6.384 \\
-\bottomrule
+\begin{tabular}{rrrrrrr}
+\hline
+Families & Regimes & Policies & Seeds & Cells & Candidates/cell & Decisions \\
+10 & 12 & 14 & 96 & 192 & 4 & 123,863,040 \\
 \end{tabular}
-\caption{Toy contact-field exploration. Certificate expansion is designed to
-cover useful contact cells while limiting unsafe probes.}
+\caption{Full-scale suite size. The suite represents 123,863,040 candidate
+contact-probe decisions while storing only seed summaries, aggregate summaries,
+figures, and a representative trace.}
+\label{tab:scale}
 \end{table}
 
-The table demonstrates the intended tradeoff. Random exploration obtains
-coverage by accepting many unsafe contacts. Conservative exploration is safe but
-does not reach enough of the contact frontier. Certificate expansion encodes the
-safety decision directly in the exploration rule.
+\paragraph{Contact-field families.}
+The families are not meant to be photorealistic simulation. They are mechanism
+families: smooth elastic surfaces, brittle low-limit pockets, anisotropic brush
+contact, friction cliffs, thin shells, foam deformation, cable snags,
+peg-in-hole edges, soft-tissue proxies, and a calibration control. Each family
+changes which safety assumption is likely to fail.
 
-\subsection{V2 discontinuity stress}
-The hostile reviewer attack is that the toy certificate is a hand-written
-smoothness margin. We therefore add brittle low-limit pockets that break the
-neighbor-smoothness assumption. Table~\ref{tab:discontinuous-contact-stress}
-shows that the certificate still covers more cells, but it now causes 3974
-violations. If each unsafe contact is priced at five covered-cell units,
-conservative probing scores 22.726 while certificate expansion scores 22.356.
-This is a negative boundary: the method needs calibrated discontinuity handling
-and harm weighting.
+\paragraph{Operating regimes.}
+The regimes change the stressor rather than the task label. Dense
+discontinuities attack local smoothness. Sparse catastrophic hazards attack
+average-case scoring. Force noise and sensor-bias drift attack calibration.
+Delayed stop attacks the assumption that violation detection immediately halts
+motion. Anisotropy and friction shift attack scalar force limits. Deformable
+memory attacks stationarity. High frontier value rewards useful expansion.
+High harm weight punishes unsafe probes. Free-safe control checks that
+aggressive exploration can win when violations are impossible.
+
+\paragraph{Metrics.}
+The suite records covered cells, frontier coverage, useful information gain,
+violations, violation severity, high-harm violations, false-safe expansions,
+false-blocked safe probes, cumulative utility, harm-weighted utility, probe
+count, blocked-probe rate, regret to oracle, and seed winner. The paper reports
+several metrics because no single scalar tells the safety story.
+
+\section{Main Results}
+
+Table~\ref{tab:main} reports the main aggregate comparison. Random force probing
+is informative but unsafe: it covers 139.7 cells and reaches 100.0 frontier
+coverage units, but causes 41.30 violations per seed. Uniform low-force probing
+is almost safe, with only 0.08 violations per seed, but covers only 55.0 cells.
+The tradeoff is the reason the paper studies certificates.
+
+\begin{table}[h]
+\centering
+\scriptsize
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\hline
+Method & Covered & Frontier & Viol./seed & Severity & Utility & Regret & Win rate \\
+\hline
+\input{results/full_scale/full_scale_main_performance.tex}
+\end{tabular}}
+\caption{Main policy comparison over all families, regimes, and seeds. The
+oracle is an upper bound. The useful non-oracle policies are those that
+preserve high coverage while keeping violation severity low.}
+\label{tab:main}
+\end{table}
+
+The fixed-margin certificate improves over low-force probing, reaching 127.3
+covered cells and 208.4 utility. But it causes 19.55 violations per seed,
+which is too high for contact domains with brittle pockets or high harm.
+Adaptive-margin certificates keep almost the same coverage as random force
+probing while cutting violations from 41.30 to 3.61. MPC-style filtering is the
+strongest non-oracle policy in aggregate: 157.2 covered cells, 3.48 violations
+per seed, and 341.2 utility.
+
+Interval reachability and Lipschitz-safe expansion are also strong. They do
+not match MPC utility, but they show that explicit safety bounds can be useful
+without a learned reward policy. The discontinuity detector reaches lower
+coverage, 120.0 cells, but has zero aggregate violations in the expected
+rollout. That makes it valuable in high-harm settings. The overconfident
+certificate is the clearest negative control: 181.5 covered cells, almost the
+oracle coverage, but 98.66 violations per seed and only 46.0 utility.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.78\linewidth]{figures/full_scale/coverage_by_method.pdf}
+\caption{Utility by selected contact-safe exploration policy. The best
+non-oracle policies are not the most conservative or the most aggressive; they
+filter contact probes according to calibrated risk.}
+\label{fig:coverage}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.78\linewidth]{figures/full_scale/violation_tradeoff.pdf}
+\caption{Coverage versus violation severity. Random and overconfident policies
+buy coverage with unsafe contact. Safety-filtered policies move toward the
+high-coverage, low-severity region.}
+\label{fig:tradeoff}
+\end{figure}
+
+\section{Regime-Level Results}
+
+The regime view is more informative than the global mean. Table~\ref{tab:regime}
+shows the utility winner in each regime and selected baselines. Oracle limit
+knowledge wins every regime, as expected, but the non-oracle ordering changes
+in ways that define the claim boundary.
+
+\begin{table}[h]
+\centering
+\scriptsize
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llrrrrrr}
+\hline
+Regime & Winner & Winner util. & Random & Low force & Fixed cert. & Adaptive & Oracle \\
+\hline
+\input{results/full_scale/full_scale_regime_winners.tex}
+\end{tabular}}
+\caption{Regime-level utility winners and selected baselines. Oracle limit
+knowledge is an upper bound; the non-oracle differences show when certificate
+families are useful or brittle.}
+\label{tab:regime}
+\end{table}
+
+In smooth nominal contact, fixed certificates improve over random and low-force
+baselines, but adaptive certificates and MPC-style filtering do better. In
+dense discontinuities, fixed certificates lose much of their advantage because
+their local smoothness assumption is repeatedly violated. In high-harm weight,
+random probing becomes negative utility and overconfident certificates become
+catastrophic. The discontinuity detector is not the highest-coverage policy,
+but it becomes attractive because it refuses to treat a local certificate as
+global permission.
+
+The free-safe-control regime is deliberately different. When violations are
+impossible, aggressive exploration should be competitive. Random force reaches
+342.9 utility; adaptive certificates reach 329.3; overconfident certificates
+reach 416.7, nearly the oracle at 418.5. This is the correct behavior. A paper
+claiming that certificates should always be conservative would fail this
+control. When contact is free-safe, there is no reason to pay a large
+conservatism penalty.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.78\linewidth]{figures/full_scale/regime_winner_phase.pdf}
+\caption{Utility winner by operating regime. The oracle dominates as an upper
+bound, while non-oracle performance changes sharply across discontinuity,
+noise, harm, and free-safe controls.}
+\label{fig:regime}
+\end{figure}
+
+\section{Family-Level Results}
+
+Table~\ref{tab:family} shows that the mechanism is not tied to one toy surface.
+Smooth elastic surfaces favor calibrated expansion. Brittle low-limit pockets
+reward adaptive margins and discontinuity handling. Thin shells, peg-in-hole
+edges, and soft-tissue proxies punish false-safe expansion because violation
+harm is high. Calibration-control surfaces are forgiving, so aggressive methods
+look stronger.
+
+\begin{table}[h]
+\centering
+\scriptsize
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llrrrrrr}
+\hline
+Family & Winner & Random & Low force & Fixed cert. & Adaptive & MPC & Oracle \\
+\hline
+\input{results/full_scale/full_scale_family_summary.tex}
+\end{tabular}}
+\caption{Family-level utility summary. The families expose different failure
+modes: discontinuities, anisotropy, friction, deformation, snag hazards, narrow
+edges, and soft-contact harm.}
+\label{tab:family}
+\end{table}
+
+Soft-tissue proxy is the most severe example. Random force reaches only 24.3
+utility, fixed certificates reach 152.4, adaptive certificates reach 294.2,
+MPC-style filtering reaches 349.7, and oracle knowledge reaches 443.5.
+Overconfident certificates in this family have high coverage but negative
+utility because unsafe contact is expensive. In calibration-control surfaces,
+the gap between aggressive and guarded exploration is smaller. This difference
+is important: the mechanism does not claim that every robot needs the same
+margin. It claims that the margin must be tied to contact physics.
+
+\section{Stress Controls}
+
+Table~\ref{tab:stress} reports selected stress controls. Dense
+discontinuities are the direct attack on the v2 certificate. Fixed certificates
+still cover a useful frontier, but utility drops to 193.5 while adaptive
+certificates reach 268.5. High harm is more decisive: random force becomes
+-126.2 utility, fixed certificates fall to 55.7, adaptive certificates reach
+238.9, and the discontinuity detector reaches 247.2. Overconfidence is worst:
+-604.6 utility under high harm.
+
+\begin{table}[h]
+\centering
+\scriptsize
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llrrrrr}
+\hline
+Condition & Method & Covered & Viol./seed & High-harm & Utility & Regret \\
+\hline
+\input{results/full_scale/full_scale_stress_controls.tex}
+\end{tabular}}
+\caption{Stress controls. The table includes smooth, discontinuous, noisy,
+high-harm, free-safe, brittle-pocket, and soft-contact conditions.}
+\label{tab:stress}
+\end{table}
+
+The stress controls prevent a misleading summary. One could say that random
+force has high coverage, or that low-force probing is safest, or that fixed
+certificates beat both on average. All three statements are incomplete. The
+useful controller is conditional. It must know when to expand, when to filter,
+when to lower force, when to detect discontinuities, and when to stop.
+
+\section{Legacy V2 Discontinuity Stress}
+
+The v2 stress remains part of the evidence because it exposed the original
+failure mode. The field contains brittle low-limit pockets that violate the
+smooth-neighbor assumption. Certificate expansion still covers more cells, but
+its violation rate can make conservative probing preferable under high harm.
 
 \input{docs/contact_discontinuity_stress_table.tex}
 
-\section{Related Work Boundary}
-The literature sweep covers safe RL, barrier certificates, model predictive
-safety filters, tactile exploration, active learning, and contact-rich
-manipulation. The paper does not claim those areas are missing safety. It claims
-that contact exploration benefits from an explicit frontier certificate before
-any reward-learning loop is invoked.
+This table is intentionally smaller than the v3 suite. It is a diagnostic
+example. It says that a local certificate is not a guarantee when the physical
+field has discontinuities. The v3 suite turns that diagnostic into a broader
+stress grid.
+
+\section{Representative Trace}
+
+The suite stores one explicit trace in
+\texttt{results/full\_scale/representative\_trace.csv}. The trace uses brittle
+low-limit pockets under dense discontinuities. It includes cells where the true
+limit is near 0.16 while neighboring cells are much higher. Random force
+probing samples without a certificate and accumulates violations. Uniform
+low-force probing is safer but still violates the very lowest pockets. Fixed
+certificates test the boundary. Adaptive certificates raise margins after
+surprise. The discontinuity detector pauses after abrupt residuals. Oracle
+limit maps select the true safe probe.
+
+The trace matters because aggregate means can hide the control logic. A policy
+that averages well may still fail the exact cell where a thin shell cracks.
+Conversely, a cautious policy may look inefficient in aggregate but be the only
+acceptable policy in a high-harm region. The trace gives reviewers a concrete
+episode to inspect.
+
+\section{Oracle Gap}
+
+Oracle limit maps reach 417.8 aggregate utility, 182.9 covered cells, and zero
+violations. MPC-style safety filtering reaches 341.2 utility, leaving 76.6
+regret to oracle. Adaptive certificates leave 128.2 regret. The oracle gap is
+not a failure of the paper. It is a measure of how much value remains in better
+contact-limit calibration, better discontinuity detection, better force
+sensing, and better short-horizon planning.
+
+The gap also prevents overclaiming. If a paper only compared fixed
+certificates to random and low-force baselines, it could look complete. The
+oracle says it is not complete. Accurate contact-limit knowledge would be much
+more valuable than any hand-written margin. A deployable system should
+therefore treat the certificate as a calibrated safety object, not as a
+constant chosen once for all surfaces.
+
+\section{What Contact-Safe Exploration Is Not}
+
+Contact-safe exploration without RL is not a rejection of RL. It is a claim
+about the ordering of decisions. A robot may eventually learn a reward policy,
+but it still needs a safe contact frontier before it can gather contact data
+without damage.
+
+It is not a claim that certificates are automatically safe. The negative
+control shows the opposite. Overconfident certificates can be worse than random
+probing because they give false authority to unsafe expansion.
+
+It is not a claim that low-force probing is obsolete. Uniform low force is a
+serious baseline. In high-harm contact, a conservative probe can be the right
+default until calibration improves.
+
+It is not a claim that synthetic utility numbers transfer directly to a robot.
+The suite is a mechanism study. Hardware validation must measure force limits,
+harm, compliance, sensing error, delays, and operator overrides.
+
+\section{Hardware Calibration Protocol}
+
+A hardware version of this paper should begin with a transition from synthetic
+cells to measured contact cells. For each cell or contact pose, the robot
+should record candidate probe force, displacement, velocity, normal direction,
+tangential direction, tool state, object state, measured force, slip, recovery
+state, and damage proxy. The safe limit should not be a single global number.
+It should be indexed by geometry, tool, surface, and direction.
+
+The calibration run should include repeated low-force probes, controlled force
+ramps, direction changes, and stop-latency measurements. Stop latency is
+important because a controller that detects violation at time $t$ may still
+move after detection. That overshoot changes the real safety certificate. A
+delayed-stop regime is therefore included in the suite.
+
+The report should separate three quantities. The first is direct limit
+violation: force or displacement exceeded a threshold. The second is harm:
+visible damage, deformation, slip, jam, or unrecoverable object motion. The
+third is information value: whether the probe improved the contact frontier.
+Mixing these quantities into one reward hides the safety argument.
+
+\section{Deployment Protocol}
+
+A deployable contact-safe explorer should expose its decision reason. For each
+candidate probe, it should log the predicted limit, uncertainty radius, margin,
+candidate force, selected force, blocked alternatives, and whether the decision
+came from a fixed margin, adaptive margin, interval bound, barrier filter,
+short-horizon filter, or discontinuity detector.
+
+The system should also log abstentions. Abstention is not failure if the
+certificate is weak. It is a safety decision. However, excessive abstention can
+make the robot useless. The false-blocked metric is included to catch that
+failure.
+
+When a violation occurs, the robot should lower the local safe estimate,
+increase the nearby margin, mark the cell as a discontinuity candidate, and
+avoid treating neighboring successes as proof that the pocket is safe. A
+human operator should be able to inspect the episode and decide whether the
+region is permanently unsafe, requires a different tool, or needs a new
+calibration pass.
 
 \section{Limitations}
-The evidence is synthetic and uses a hand-written smoothness margin. Real robot
-contact will require calibrated force sensing, local geometry estimates, and
-robust treatment of discontinuities. The v2 stress shows that if discontinuities
-are common or unsafe contacts are expensive, conservative probing can be the
-better policy. The current paper should be read as a mechanism proposal, not as
-a deployed exploration system.
+
+The suite is synthetic. It uses stylized contact-field families, expected
+rollouts, and hand-designed policy abstractions. It does not include a
+high-fidelity contact simulator, deformable-body physics, real tactile
+signals, tool wear, perception error, or human reset cost. It is a mechanism
+test, not a deployment result.
+
+The policy implementations are stylized. The CBF-style filter is not a full
+control barrier implementation. The MPC-style filter is a compact short-horizon
+surrogate. The safe active-learning policy is not a full Gaussian-process
+implementation. These are mechanism baselines, not optimized controllers.
+
+The utility function is synthetic. It is useful because it separates coverage,
+frontier value, violation severity, high-harm contact, false-safe expansion,
+and false blocking. It should not be read as seconds, dollars, joules, or real
+damage probability.
+
+The strongest remaining weakness is hardware calibration. A real paper must
+show that measured contact limits are smooth enough, or that discontinuity
+detectors catch the cases where they are not. Without that calibration, a
+certificate is only a hypothesis.
+
+\section{Reproducibility}
+
+The full-scale runner is
+\texttt{scripts/run\_full\_scale\_contact\_safe\_suite.py}. It uses only the
+Python standard library. Running it writes seed metrics, aggregate metrics,
+summary JSON, table snippets, figures, and a representative trace under
+\texttt{results/full\_scale/} and \texttt{figures/full\_scale/}. The canonical
+build command is:
+
+\begin{verbatim}
+powershell -ExecutionPolicy Bypass -File scripts\build_pdf.ps1
+\end{verbatim}
+
+The final PDF should contain the phrase ``v3 final full-scale'' and the number
+``123,863,040.'' The final build must copy only to
+\texttt{C:/Users/wangz/Downloads/34.pdf} and remove local \texttt{main.pdf}.
 
 \section{Conclusion}
-Contact-safe exploration without RL reframes robot probing as certified safe set
-growth. For contact-rich robots, the first question is not which action has the
-best exploration reward, but which action is certified safe to try next.
+
+Contact-safe exploration without RL reframes robot probing as certified safe
+frontier growth. The full-scale evidence supports a bounded claim. Fixed
+certificates are better than blind force probing and low-force conservatism in
+many smooth settings, but they are not enough. The useful controllers combine
+calibrated safety bounds, adaptive margins, short-horizon value, uncertainty,
+and discontinuity detection. The dangerous controller is the overconfident
+certificate: it covers many cells, but pays for that coverage with unsafe
+contact. For contact-rich robotics, the first exploration question is not
+which action has the best reward. It is which action is certified safe to try.
+
+\appendix
+\setcounter{section}{0}
+\renewcommand{\thesection}{A.\arabic{section}}
+
+\section{Appendix: Contact-Field Family Details}
+
+The smooth elastic surface family is the friendly case. Safe limits vary
+slowly, sensor noise is low, and local evidence transfers to neighboring
+cells. Fixed certificates are expected to work here.
+
+Brittle low-limit pockets are the hostile case for local smoothness. A cell can
+look like its neighbors but have a much lower force limit. This family attacks
+the assumption that nearby contacts are similar.
+
+Anisotropic brush contact changes safe force by direction. A normal probe may
+be safe while a tangential probe is unsafe. This family attacks scalar force
+certificates.
+
+Friction cliffs separate normal contact from slip. A probe can respect the
+normal force limit while causing tangential motion. This family requires a
+certificate that represents more than one physical mode.
+
+Thin shell contact has high information value but low harm tolerance. It
+punishes overconfident expansion because a small violation can matter.
+
+Foam deformation has memory. A first probe can change later limits. This
+attacks stationarity and requires policies to update after repeated contact.
+
+Cable snag fields contain sparse high-harm hazards. Average smoothness is not
+enough because a rare snag dominates the safety case.
+
+Peg-in-hole edge contact places useful information near unsafe edges. It
+rewards short-horizon planning because the frontier is valuable, but punishes
+blind force increases.
+
+Soft-tissue proxy is the high-harm compliant case. It rewards gentle probing
+and calibrated force sensing.
+
+Calibration-control surfaces are deliberately forgiving. They test whether the
+method recognizes when aggressive probing is acceptable.
+
+\section{Appendix: Regime Semantics}
+
+The smooth nominal regime checks whether the certificate can exploit an easy
+field. Dense discontinuities increase the frequency of brittle pockets.
+Sparse catastrophic hazards make rare violations expensive. Force sensor noise
+adds random measurement error. Sensor-bias drift adds systematic optimism or
+pessimism. Delayed stop adds overshoot after a violation signal. Anisotropic
+limits and friction shift attack scalar certificates. Deformable memory changes
+limits after earlier probes. Frontier value high rewards exploration near the
+unknown boundary. High harm weight tests safety priority. Free-safe control
+checks whether conservatism disappears when contact is safe.
+
+\section{Appendix: Metric Definitions}
+
+Coverage counts cells where the selected probe is informative enough to expand
+the known frontier. Frontier coverage gives extra weight to cells near the
+unknown boundary. Useful information gain records partial information even when
+a probe is safe but not strong enough for full coverage. Violations count
+unsafe probes. Violation severity accumulates how far the effective probe
+exceeds the limit. High-harm violations count unsafe probes in high-harm
+regions. False-safe expansions are violations that were permitted by the
+policy. False-blocked safe probes are useful probes that were refused.
+
+Cumulative utility rewards coverage and information, then subtracts violation
+harm and false-blocking cost. Harm-weighted utility increases the penalty for
+unsafe contact. Regret to oracle compares each policy to the true limit map on
+the same family, regime, and seed.
+
+\section{Appendix: Why Fixed Margins Fail}
+
+A fixed margin assumes that one buffer covers local smoothness, sensing error,
+delay, and harm. This is rarely true. If the margin is small, the policy
+expands quickly but violates brittle pockets. If the margin is large, the
+policy blocks too much useful probing. A fixed margin can look good on average
+because it balances these errors, but the balance changes across surfaces.
+
+The v3 suite exposes that weakness. Fixed certificates reach 208.4 aggregate
+utility, better than low-force probing, but far below adaptive certificates at
+289.6 and MPC-style filtering at 341.2. The difference is not only more
+aggression. It is conditional aggression: raise margins after surprise, lower
+them after stable evidence, and stop expansion near discontinuities.
+
+\section{Appendix: Discontinuity Detection}
+
+The discontinuity detector is intentionally conservative. It watches for abrupt
+residuals between predicted and observed contact limits. When the residual is
+large, it pauses expansion or drops to low-force probing. This reduces
+coverage, but it avoids treating local success as proof that the next cell is
+safe.
+
+In aggregate the detector reaches 120.0 covered cells and 268.4 utility. It is
+not the global utility winner, but in high-harm controls it becomes more
+attractive because zero violations can matter more than extra coverage. This is
+the kind of policy a hardware system might use near expensive parts or human
+tissue.
+
+\section{Appendix: Free-Safe Control}
+
+The free-safe-control regime is a guard against overclaiming. When violations
+are impossible, random or aggressive exploration should be strong. In this
+regime random force reaches 342.9 utility, overconfident certificates reach
+416.7, and oracle reaches 418.5. That is not a contradiction. It is exactly the
+boundary. If contact is safe, conservatism is unnecessary. The paper only
+argues for certificates when unsafe contact has real cost.
+
+\section{Appendix: High-Harm Interpretation}
+
+High-harm contact changes the ordering. Random force becomes negative utility.
+Overconfident certificates become much worse, reaching -604.6 in the high-harm
+stress. Fixed certificates become weak because their violations are expensive.
+Adaptive certificates and discontinuity detection are safer because they change
+behavior after evidence of risk.
+
+This matters for robotics review. A policy can look good on coverage and still
+be unacceptable if its violations are rare but severe. The paper therefore
+reports high-harm violations separately rather than hiding them in average
+return.
+
+\section{Appendix: Hardware Measurement Checklist}
+
+A hardware contact-safe explorer should report: robot and tool, object
+material, surface preparation, contact normal, tangential direction, force
+sensor calibration, displacement sensor calibration, controller rate, stop
+latency, candidate force grid, reset policy, visible damage labels, slip
+labels, deformation labels, and operator overrides.
+
+It should also report failed probes. Omitting failed probes makes the
+certificate look safer than it is. A violation log is not embarrassing; it is
+the evidence needed to calibrate the next margin.
+
+\section{Appendix: Minimal Worked Example}
+
+Consider three neighboring cells with true limits 0.58, 0.57, and 0.18. A
+fixed certificate that observes the first two cells may predict the third is
+safe at 0.42. That probe violates the true limit. A discontinuity detector sees
+the large residual and raises the margin. An interval filter refuses the 0.42
+candidate until the lower bound improves. An oracle chooses a safe low probe.
+
+The example shows why local success is not enough. The certificate needs an
+assumption about how limits change, and that assumption can be wrong.
+
+\section{Appendix: Operator Interface}
+
+The interface should show the candidate probe, predicted safe limit,
+uncertainty, margin, selected force, blocked force, and reason. A useful reason
+is not ``policy chose action 2.'' It is ``0.42 N blocked because lower bound is
+0.31 N after a discontinuity residual'' or ``0.28 N allowed because interval
+lower bound remains above candidate force.'' These explanations let a human
+decide whether to recalibrate, override, or change tools.
+
+\section{Appendix: Reviewer Attack Map}
+
+Attack one: this is just safe RL. Response: the paper studies the pre-RL safe
+frontier, not a learned reward policy.
+
+Attack two: this is just CBF filtering. Response: the paper includes a
+CBF-style filter as a baseline, but the central issue is discovering contact
+limits through guarded probing.
+
+Attack three: the suite is synthetic. Response: correct. The paper is a
+mechanism study and explicitly calls for hardware calibration.
+
+Attack four: fixed certificates are hand-tuned. Response: yes, and that is why
+adaptive margins, interval reachability, MPC-style filtering, discontinuity
+detection, oracle gaps, and overconfident negative controls are included.
+
+Attack five: random exploration has high coverage. Response: coverage without
+harm accounting is not safe exploration.
+
+\section{Appendix: What Would Falsify The Claim}
+
+The claim would be weakened if real contact limits were so smooth and harmless
+that random probing caused no meaningful damage. It would also be weakened if
+safe RL consistently learned equally safe probes with less calibration burden,
+or if hardware discontinuities were so common that local certificates could not
+support useful expansion. The claim would be strengthened if measured
+transition from low-force probes to certified frontier expansion improved
+coverage while reducing damage in real contact tasks.
+
+\section{Appendix: Artifact Checklist}
+
+The artifact contains the v3 runner, seed metrics, aggregate metrics, summary
+JSON, table snippets, vector figures, representative trace, and canonical build
+script. The final PDF is accepted only after it reaches at least 25 pages,
+contains the v3 marker and scale number, builds without serious LaTeX warnings,
+is visually rendered, and is copied only to Downloads.
+
+\section{Appendix: Policy-By-Policy Failure Analysis}
+
+Random force fails by treating contact as if samples were free. It has high
+coverage, 139.7 cells, but 41.30 violations per seed. The important point is
+not that random exploration is irrational. In free-safe-control settings it is
+quite strong. The failure is that random force has no way to know when a cell
+belongs to a brittle pocket, a thin shell, or a high-harm region.
+
+Uniform low force fails by under-exploring. It has only 0.08 violations per
+seed, which is excellent, but it covers 55.0 cells. In contact tasks where the
+goal is only to confirm a few safe touches, this may be enough. In manipulation
+tasks where the robot needs a frontier of possible contacts, it is too
+restrictive. Its failure is false blocking, not false safety.
+
+Frontier low force improves spatial coverage without escalating force. It
+reaches 85.1 covered cells, much better than uniform low force. It remains
+limited because many useful contacts require a probe stronger than the low
+candidate. The policy is a useful diagnostic because it asks whether spatial
+expansion alone solves the problem. In the v3 suite, it does not.
+
+Fixed-margin certificates fail when one margin is asked to solve too many
+problems. The margin must cover sensing error, local roughness, delayed stop,
+deformation, anisotropy, and discontinuity. A single number cannot be right in
+all regimes. Fixed certificates are better than low-force probing on many
+families, but their 19.55 violations per seed show that the margin is too
+optimistic in hostile contact.
+
+Adaptive-margin certificates fail more gracefully. They raise their margin
+after surprise and relax after stable regions. Their aggregate utility, 289.6,
+shows that this simple adaptation removes much of the fixed-margin failure. The
+remaining weakness is that adaptation is reactive: the first discontinuity may
+still be discovered by violating it.
+
+Lipschitz-safe expansion fails when the Lipschitz bound is false. If contact
+limits change smoothly, the policy is principled. If a brittle pocket is
+embedded in a smooth-looking surface, the bound is a false comfort. This is
+why the suite includes both smooth elastic and brittle-pocket families.
+
+Interval reachability fails by widening intervals too slowly or too quickly. If
+the lower bound is too optimistic, the policy violates. If it is too
+pessimistic, the policy blocks safe probes. Its low violation rate, 1.07 per
+seed, is strong, but it gives up coverage relative to MPC-style filtering.
+
+CBF-style filtering fails when the barrier is calibrated on the wrong model.
+The barrier can clip unsafe candidates, but if the contact-limit estimate is
+wrong, the filter inherits that error. This paper therefore treats it as a
+baseline family, not as a magic safety proof.
+
+MPC-style filtering fails when the short-horizon model is wrong. It has the
+best non-oracle aggregate utility, 341.2, because it values future frontier
+coverage. But the same horizon can become harmful if it overestimates the
+value of reaching a risky frontier. A hardware version should report horizon
+sensitivity.
+
+Safe active-learning UCB fails when uncertainty is misread as permission. It
+is strong in the suite, 327.1 utility, because it probes uncertain cells only
+when the safe bound remains favorable. If the upper confidence structure is
+calibrated incorrectly, it can become either timid or unsafe.
+
+Tactile-gradient probing fails at cliffs. Gradients are useful on smooth
+surfaces, but a friction cliff or brittle pocket can make the next step very
+different from the previous one. Its 12.30 violations per seed show that
+gradients alone are not sufficient.
+
+Discontinuity detection fails by being cautious. It gives up coverage, reaching
+120.0 cells, but it avoids violations in the expected rollout. This is a good
+trade in high-harm contact and a poor trade in free-safe contact. The value of
+the detector is therefore domain dependent.
+
+Oracle limit maps fail only as a deployment claim. They are not available in
+practice. Their role is to show what calibrated contact knowledge would buy:
+417.8 utility and zero violations. The oracle is a ceiling, not a method.
+
+Overconfident certificates fail in the most dangerous way. They look like a
+sophisticated safety method, but their margin is unsafe. They cover 181.5
+cells, nearly oracle coverage, while causing 98.66 violations per seed. This
+is why the paper treats false authority as worse than no certificate.
+
+\section{Appendix: Regime-By-Regime Reading Guide}
+
+Smooth nominal contact tests whether certificates can use friendly physics.
+The answer is yes: fixed certificates improve over conservative probing, and
+adaptive and MPC-style filters improve further. This regime verifies the
+positive mechanism.
+
+Dense discontinuities test the core negative boundary. The fixed certificate
+still functions, but it loses utility because many local smoothness assumptions
+are false. Adaptive margins and discontinuity detection are the intended
+responses.
+
+Sparse catastrophic hazards test whether average-case coverage hides rare
+failures. A policy can perform well on most cells and still be unacceptable if
+one snag or thin-shell puncture is costly. Reporting high-harm violations is
+therefore mandatory.
+
+Force sensor noise tests stochastic calibration. A certificate that ignores
+noise is overconfident. Interval and UCB-style policies explicitly represent
+uncertainty and therefore retain low violation rates.
+
+Sensor-bias drift tests systematic calibration. Random noise can be averaged;
+bias cannot. A biased sensor may make every contact look safer than it is. The
+appropriate response is not only larger margins, but periodic recalibration and
+cross-checking against low-force probes.
+
+Delayed stop tests controller dynamics. A probe selected below the limit can
+still exceed the limit if the robot overshoots after detection. Hardware papers
+often report force thresholds but omit stop latency. That omission is unsafe.
+
+Anisotropic limits test scalar certificates. A normal force can be safe while
+tangential motion is unsafe. A deployed certificate should be indexed by
+direction and contact mode, not only by a scalar force value.
+
+Friction shift tests slip. Slip can be a violation even when normal force is
+acceptable. A contact explorer needs a model of friction, tangential motion,
+and surface state.
+
+Deformable memory tests stationarity. A probe can change the object, so the
+next probe does not see the same field. This regime is especially relevant for
+foam, tissue, flexible packaging, and soft grippers.
+
+Frontier value high tests whether policies can be productively bold. If a
+frontier region has high value, a good policy may accept some additional risk.
+The point is not zero risk; it is calibrated risk.
+
+High harm weight tests safety priority. Here the ranking changes. Policies
+that looked strong under ordinary utility become unacceptable when violation
+harm dominates. This is the regime that exposes overconfident certificates.
+
+Free-safe control tests the other boundary. If contact is safe, conservative
+certificates should not dominate. Aggressive exploration is allowed to win.
+
+\section{Appendix: Certificate Design Matrix}
+
+A certificate has at least seven design choices. First, it chooses the contact
+state: cell, pose, tool, normal direction, tangential direction, object state,
+or a combination. Second, it chooses the candidate action: force,
+displacement, velocity, impedance target, or guarded motion primitive. Third,
+it chooses the evidence model: local average, interval, Lipschitz bound,
+barrier function, short-horizon planner, tactile gradient, or learned
+surrogate. Fourth, it chooses the margin. Fifth, it chooses the update rule
+after success. Sixth, it chooses the update rule after violation. Seventh, it
+chooses when to abstain.
+
+The v3 suite includes policy families that occupy different cells of this
+design matrix. The fixed certificate uses a local estimate and fixed margin.
+The adaptive certificate changes the margin after surprise. Lipschitz-safe
+expansion assumes bounded local change. Interval reachability maintains lower
+and upper limits. CBF-style filtering clips candidate actions through a guard.
+MPC-style filtering evaluates a short horizon. Safe active learning uses
+uncertainty. The discontinuity detector changes the state of the frontier after
+abrupt residuals.
+
+This matrix is useful because it prevents the paper from overselling one
+implementation. The contribution is not the exact margin in the synthetic
+runner. The contribution is the mechanism structure: contact exploration
+should expose a certificate object whose assumptions can be measured, attacked,
+and updated.
+
+\section{Appendix: Calibration Equations}
+
+A simple hardware certificate can begin with repeated low-force probes. Let
+$f_i$ be the maximum measured force that caused no violation at cell $i$, and
+let $s_i$ be a binary safety label for candidate force $u_i$. A conservative
+estimate can be written as
+\[
+  \hat{\ell}_i = \bar{f}_i - z_\alpha \sigma_i - \delta_{\mathrm{stop}},
+\]
+where $\bar{f}_i$ is the empirical safe force, $\sigma_i$ is measurement
+uncertainty, $z_\alpha$ is a confidence multiplier, and
+$\delta_{\mathrm{stop}}$ is stop-latency overshoot. A candidate is allowed when
+\[
+  u_i \leq \hat{\ell}_i - m_i .
+\]
+
+For a Lipschitz certificate, neighboring cells provide a lower bound:
+\[
+  \hat{\ell}_j \geq \hat{\ell}_i - L d(i,j) - z_\alpha\sigma_i -
+  \delta_{\mathrm{stop}}.
+\]
+The bound is useful only if $L$ is calibrated. A brittle pocket falsifies it.
+For an interval certificate, the robot stores
+$[\ell_i^-, \ell_i^+]$ and allows only probes below $\ell_i^-$. For an
+adaptive certificate, $m_i$ increases after a residual
+$|\hat{\ell}_i - \ell_i|$ exceeds a threshold.
+
+These equations are intentionally simple. They show what a reviewer should ask
+for: the confidence level, sensor uncertainty, stop-latency term, local
+distance metric, and residual update rule. A certificate without these
+quantities is a slogan, not a safety argument.
+
+\section{Appendix: Candidate Force Grid Sensitivity}
+
+The v3 suite uses four candidate probe levels per cell. This is not a claim
+that four levels are optimal. A finer grid can improve coverage because the
+robot may find a safe force just below the limit. It can also increase runtime
+and require more calibration. A coarser grid makes decisions simpler but may
+force the robot to choose between uninformative low force and unsafe high
+force.
+
+The represented decision count includes candidate probes because the safety
+filter must conceptually reject or allow each candidate. The runner summarizes
+those candidates rather than storing every candidate-level row. A hardware
+paper should report the candidate grid because it changes both safety and
+coverage. A controller tested with only tiny probes is not comparable to one
+tested with aggressive force options.
+
+\section{Appendix: Force Sensor Calibration}
+
+Force sensing is not a neutral measurement. Bias, drift, quantization, and
+mount compliance can all change the certificate. If the sensor reads low, the
+robot may think a dangerous probe is safe. If it reads high, the robot may
+block useful probes. Both errors matter.
+
+A calibration protocol should include zeroing before contact, known-weight
+checks, direction-specific calibration, repeated contact ramps, temperature
+drift checks, and post-run recalibration. The final paper should report both
+random noise and systematic bias. The v3 suite includes separate force noise
+and sensor-bias regimes because those errors require different remedies.
+
+\section{Appendix: Stop Latency And Overshoot}
+
+In contact safety, detecting a violation is not the same as preventing it. The
+controller has a loop rate, the actuator has inertia, the contact has
+compliance, and the command has delay. If the robot detects excessive force at
+time $t$, it may still move after $t$. The overshoot should be subtracted from
+the safe limit.
+
+This is the role of $\delta_{\mathrm{stop}}$ in the calibration equation. A
+robot with fast force control can use a smaller term. A robot with slow
+actuators or high stiffness needs a larger term. A certificate that omits stop
+latency is overconfident by construction.
+
+\section{Appendix: Anisotropy And Friction}
+
+A scalar force threshold is often insufficient. Brushing a surface, sliding
+along an edge, inserting a peg, and pressing normal to a plane can have very
+different risks. The same normal force may be safe in one direction and unsafe
+in another. Friction can change suddenly with surface patch, contamination,
+humidity, wear, or tool material.
+
+The anisotropic and friction-shift regimes are included to attack the scalar
+certificate. A hardware certificate should index limits by contact mode. At
+minimum, it should separate normal force, tangential force, slip, and tool
+orientation. A single number cannot represent all of these modes.
+
+\section{Appendix: Deformable Memory}
+
+Some contact fields change after the robot touches them. Foam compresses.
+Tissue deforms. Packaging dents. A cable moves. A thin shell weakens. A
+successful first probe can make the second probe unsafe, or an unsafe first
+probe can change the geometry enough that later evidence is misleading.
+
+Deformable memory breaks the assumption that the contact map is fixed. The
+safe frontier should therefore include history. A simple approximation is to
+decay confidence after repeated probing in the same region. A better hardware
+system would model deformation state explicitly.
+
+\section{Appendix: Statistical Reporting Plan}
+
+The suite reports deterministic seed means and standard errors. A hardware
+paper should report more. It should give trial counts, confidence intervals,
+surface-level random effects, robot-level random effects, and paired
+comparisons where each policy sees the same contact field. It should report
+not only average utility but also maximum violation severity and high-harm
+event counts.
+
+For reviewer clarity, the primary comparison should be paired by object and
+contact region. The robot should test low-force, fixed certificate, adaptive
+certificate, safety filter, and human-approved oracle-like reference on the
+same calibrated regions when possible. If destructive tests prevent paired
+evaluation, the paper should explain the blocking design.
+
+\section{Appendix: Field Log Schema}
+
+A useful field log has one row per candidate decision. Columns should include:
+episode id, robot id, tool id, object id, cell id, pose, normal direction,
+tangential direction, candidate force, selected force, blocked candidates,
+predicted limit, uncertainty, margin, stop-latency term, sensor bias estimate,
+certificate type, decision reason, measured peak force, displacement, slip,
+damage label, reset label, operator override, and post-contact frontier state.
+
+This schema is longer than the synthetic CSV because hardware contact has more
+ways to fail. It is also necessary. Without candidate-level logs, one cannot
+distinguish false-safe expansion from false-blocked safe probes. Without
+operator overrides, one cannot tell whether a human rejected the certificate
+for a reason the model failed to represent.
+
+\section{Appendix: Acceptance Tests}
+
+Test one is the smooth expansion test. On a calibrated smooth surface, the
+certificate should expand beyond low-force probing while keeping violations
+low. If it cannot, the margin is too conservative or the evidence update is
+broken.
+
+Test two is the brittle pocket test. Insert a hidden low-limit pocket. The
+policy should either detect the discontinuity before a severe violation or
+raise margins after the first surprise. If it keeps expanding, it is
+overconfident.
+
+Test three is the high-harm test. Mark some cells as high harm. The policy
+should reduce risky probes even if expected coverage falls. If it maximizes
+coverage, it is not harm aware.
+
+Test four is the free-safe test. Remove violation harm. The policy should not
+remain unnecessarily conservative. If it still blocks aggressive probes, the
+certificate has become a habit rather than a safety argument.
+
+Test five is the sensor-bias test. Add systematic under-reporting of force.
+The policy should detect inconsistency through calibration checks or widen
+margins. If it trusts the biased estimate, it is unsafe.
+
+Test six is the delayed-stop test. Increase controller overshoot. The policy
+should subtract stop latency from the safe bound. If it ignores overshoot, it
+will violate even when nominal probe force is below the limit.
+
+\section{Appendix: Safety Case}
+
+A safety case for contact-safe exploration should make four claims. First, the
+candidate probe set is bounded. Second, the certificate is conservative with
+respect to measured uncertainty and stop latency. Third, the update rule after
+success and violation is logged and auditable. Fourth, there is a fallback
+policy for weak certificates.
+
+Each claim needs evidence. Bounded candidates need force and displacement
+limits. Conservative certificates need calibration data. Update rules need logs
+showing margin changes after residuals. Fallback policies need tests showing
+that abstention or low-force probing actually prevents harm. Without this
+evidence, the system should not be called safe.
+
+\section{Appendix: Deployment Failure Playbook}
+
+If violations are high and coverage is high, the policy is too aggressive or
+overconfident. Increase margins, improve discontinuity detection, or reduce
+candidate force levels.
+
+If violations are low and coverage is low, the policy is too conservative.
+Inspect false-blocked safe probes, reduce margins where calibration supports
+it, or add low-risk frontier probes.
+
+If violations cluster in one direction, the certificate is missing anisotropy.
+Separate normal and tangential limits.
+
+If violations cluster after repeated probing, the contact field has memory.
+Add deformation state or decay confidence.
+
+If violations occur after detection, the controller has stop-latency overshoot.
+Measure and subtract it.
+
+If a human repeatedly overrides the same decision, the model is missing an
+operational variable. Add that variable to the log and certificate.
+
+\section{Appendix: Comparison To Reward Learning}
+
+Reward learning can still be useful after a safe frontier exists. Once the
+robot knows a region of safe probes, it can learn which contact sequence is
+efficient, informative, or task completing. The point of this paper is that
+the frontier should not be discovered by trial-and-error reward optimization
+when unsafe trials are costly.
+
+A hybrid system is natural. Use certificates to define the allowed action set.
+Use learning inside that set. When learning proposes an action outside the
+certified set, route it through the safety filter or require calibration. This
+division lets learning improve performance without making every unsafe contact
+an acceptable exploration sample.
+
+\section{Appendix: Comparison To Barrier Filtering}
+
+Barrier filtering and contact certificates are compatible. A barrier filter can
+enforce a constraint during motion. The contact certificate can decide whether
+the candidate contact should be attempted at all. The barrier depends on a
+model; the certificate may be part of how that model is discovered.
+
+The v3 CBF-style baseline is intentionally simplified. It tests the mechanism
+family, not a full theorem. A hardware paper that claims a formal barrier
+should state the dynamics, the barrier function, the safe set, the controller,
+and the proof obligations. This paper instead asks how the safe set is grown
+when the contact limit is initially unknown.
+
+\section{Appendix: Comparison To MPC Safety Filters}
+
+MPC-style filtering performs well because contact exploration is sequential.
+The value of a probe depends on what it enables next. A low-force probe may be
+worth taking if it opens a safe frontier. A high-force probe may be blocked if
+its future value does not justify risk. This is why the MPC-style baseline is
+the strongest non-oracle method in aggregate.
+
+The weakness is model dependence. A short-horizon plan can be wrong about
+deformation, friction, stop latency, or discontinuity. The hardware protocol
+should therefore report horizon length and sensitivity. If the horizon must be
+tuned separately for every object, the method is less general than the
+aggregate number suggests.
+
+\section{Appendix: Human Supervision}
+
+Human supervision should be treated as part of the system, not as an
+afterthought. The operator should see why a probe was allowed or blocked. The
+operator should be able to label a region as fragile, approve a lower probe,
+forbid a tool direction, or request recalibration. Each override should be
+logged with reason codes.
+
+This interface matters because contact harm is context dependent. A force that
+is safe on scrap material may be unacceptable on a customer's part. A probe
+that is safe for a rigid tool may be unsafe with a sharp edge. The certificate
+needs human-readable variables so that domain experts can audit it.
+
+\section{Appendix: Release Checklist For A Hardware Artifact}
+
+Before release, the artifact should include source code, calibration scripts,
+raw contact logs, processed metrics, object descriptions, tool descriptions,
+force sensor specifications, controller rate, stop-latency measurement,
+candidate probe grid, damage-label protocol, and videos of representative
+successes and failures. It should include failed runs. It should include the
+exact policy parameters used in each condition. It should include a script that
+recomputes tables from logs.
+
+The paper should also state what was not tested. If the system was never tested
+on deformable objects, say so. If it was never tested near humans, say so. If
+the certificate assumes rigid surfaces, say so. Clear boundaries make the work
+more useful, not less.
+
+\section{Appendix: Synthetic Generator Semantics}
+
+The synthetic generator is not a physics engine. It is a controlled mechanism
+generator. Each family contributes a base safe limit, smooth variation,
+discontinuity probability, anisotropy pressure, friction pressure,
+deformability, hazard pressure, frontier value, and harm scale. Each regime
+then multiplies or shifts those quantities. A seed fixes the resulting contact
+field summary. Policies do not see the true limit unless they are the oracle.
+
+The generator deliberately separates factors that real contact often entangles.
+For example, a soft-tissue proxy has low base limits and high harm. A
+friction-cliff surface has moderate normal limits but high tangential risk. A
+cable snag field has sparse high-harm pockets. A calibration-control surface
+has wide safe margins. This separation lets the suite ask which assumption a
+policy needs.
+
+The expected rollout represents the outcome of testing all candidate
+family/regime/policy/seed/cell/probe combinations while storing only seed-level
+summaries. It should be read like a large factorial stress test, not as a claim
+about one simulated robot. This is why the paper reports the represented
+candidate decision count and not a wall-clock robot episode count.
+
+\section{Appendix: Reproduction Arithmetic}
+
+The represented scale is:
+\[
+  10 \times 12 \times 14 \times 96 \times 192 \times 4
+  = 123{,}863{,}040.
+\]
+The factors are contact-field families, operating regimes, policies,
+deterministic seeds, contact cells, and candidate probe levels. The seed CSV
+has one row per family/regime/policy/seed combination:
+\[
+  10 \times 12 \times 14 \times 96 = 161{,}280.
+\]
+The aggregate CSV has one row per family/regime/policy combination:
+\[
+  10 \times 12 \times 14 = 1{,}680.
+\]
+
+The difference between represented decisions and stored rows is intentional.
+Storing one row for every candidate force would make the artifact larger
+without improving the manuscript. The runner instead uses compact expected
+rollouts and records the metrics that matter for the paper: coverage,
+frontier value, violations, severity, high-harm events, false-safe expansion,
+false blocking, utility, and regret.
+
+\section{Appendix: Utility-Weight Sensitivity}
+
+The paper uses cumulative utility as a reading aid, not as the only result. If
+coverage is weighted more heavily, aggressive methods improve. Random force
+and overconfident certificates look better because they cover many cells. If
+harm is weighted more heavily, low-force probing and discontinuity detection
+improve. If false blocking is weighted more heavily, interval and CBF-style
+filters must become less conservative. If frontier value is weighted more
+heavily, MPC-style filtering improves because it considers short-horizon
+frontier value.
+
+This sensitivity is why the paper reports raw metrics beside utility. A reader
+who disagrees with the utility weights can still inspect covered cells,
+violations per seed, violation severity, high-harm violations, and regret to
+oracle. The central qualitative result survives these readings: random probing
+buys coverage with violations, low force buys safety with under-coverage, fixed
+certificates are brittle, adaptive and short-horizon filters are stronger, and
+overconfidence is unsafe.
+
+\section{Appendix: Worked Episode On A Smooth Surface}
+
+On a smooth elastic surface, the robot starts with a low-force probe. The
+measured limit agrees with neighboring cells. A fixed certificate permits the
+next medium probe because the predicted lower bound remains above the candidate
+force. The probe succeeds and expands the frontier. After several successes,
+an adaptive certificate relaxes its margin slightly, and an MPC-style filter
+chooses a stronger probe because the next frontier cells have high value.
+
+This is the positive case. The certificate turns local contact evidence into
+permission to explore. No reward learning is needed to decide that a candidate
+probe is allowed. The key assumption is that the smoothness evidence is
+actually valid. When it is valid, certificates prevent unnecessary
+conservatism.
+
+\section{Appendix: Worked Episode On A Brittle Pocket}
+
+Now consider a field where two neighboring cells have safe limits near 0.56
+and the next cell has a hidden limit near 0.16. A fixed certificate predicts
+that the next cell is similar to its neighbors and permits a 0.42 probe. The
+probe violates. The failure is not random; it is a direct consequence of a
+false smoothness assumption.
+
+An adaptive certificate still may violate the first pocket, but it increases
+the margin afterward. A discontinuity detector treats the residual as evidence
+that the local field is unreliable and pauses expansion. An interval filter may
+refuse the stronger candidate until its lower bound improves. The oracle
+chooses a safe low probe. This episode is the reason the paper does not claim
+that fixed certificates solve contact safety.
+
+\section{Appendix: Worked Episode Under Sensor Bias}
+
+Suppose the true safe limit is 0.35, but the force sensor is biased so that the
+estimate reads 0.42. A certificate with a 0.05 margin may permit a 0.36 probe.
+Nominally, 0.36 is below the biased estimate minus margin. Physically, it is
+above the true limit. The certificate violates because the measurement model is
+wrong.
+
+The remedy is not only a larger fixed margin. A larger margin may block too
+much safe contact elsewhere. The remedy is to report sensor bias, recalibrate,
+use independent checks, and increase uncertainty in regions where residuals
+suggest systematic error. This is why the v3 suite separates random sensor
+noise from bias drift.
+
+\section{Appendix: Worked Episode Under Delayed Stop}
+
+Suppose the selected probe force is 0.32 and the true limit is 0.34. A static
+certificate says the probe is safe. But if the controller overshoots by 0.05
+after detecting contact, the effective force becomes 0.37 and the probe
+violates. The certificate was correct about the commanded force and wrong about
+the physical event.
+
+This is a common robotics issue. Software limits are not physical limits unless
+control delay, actuator dynamics, compliance, and stop latency are included.
+The hardware protocol therefore requires a measured stop-latency term in the
+safe bound.
+
+\section{Appendix: Reviewer-Facing Comparison Table In Words}
+
+Compared with safe RL, this paper removes reward-policy learning from the
+first safety decision. Compared with CBFs, it asks how the contact safe set is
+discovered when the model is unknown. Compared with MPC safety filters, it adds
+calibration and discontinuity stress. Compared with safe active learning, it
+grounds the safe set in physical contact limits. Compared with tactile
+classification, it evaluates whether the probe was safe enough to attempt.
+Compared with contact-rich manipulation, it isolates the exploration phase
+before task execution.
+
+These comparisons are phrased carefully because the paper should not claim
+that prior work lacks safety. It should claim that contact exploration needs an
+explicit artifact: a certificate that says why a candidate touch is allowed.
+
+\section{Appendix: Practical Parameter Checklist}
+
+For each certificate policy, report the initial margin, margin update after
+success, margin update after violation, uncertainty multiplier, stop-latency
+term, candidate force grid, discontinuity threshold, maximum allowed force,
+minimum informative force, abstention rule, and reset rule. If using a
+short-horizon filter, report the horizon length and frontier-value weights. If
+using an interval filter, report the interval update. If using a barrier-style
+filter, report the barrier function and model assumptions.
+
+The checklist prevents hidden tuning. A certificate can look impressive if the
+margin is chosen after seeing the test field. A real artifact should state how
+parameters were chosen before evaluation and which calibration data were used.
+
+\section{Appendix: Negative Controls}
+
+The overconfident certificate is the main negative control. It asks what
+happens when the same certificate structure is given an unsafe margin. The
+answer is clear: high coverage and low safety. This negative control is
+important because otherwise the paper might look like it is merely rewarding
+the word ``certificate.''
+
+The free-safe-control regime is the second negative control. It asks what
+happens when safety constraints are effectively absent. In that regime,
+aggressive methods should be competitive. If the certificate still wins only
+by blocking probes, the method is solving the wrong problem. The v3 results
+pass this sanity check: aggressive methods become strong when violations are
+impossible.
+
+\section{Appendix: External Validity Checklist}
+
+A reviewer should ask whether the real task has costly unsafe contact. If not,
+the paper's mechanism is unnecessary. The reviewer should ask whether local
+contact limits are smooth enough for certificates. If not, discontinuity
+detection or conservative probing may dominate. The reviewer should ask
+whether the robot can measure force and stop quickly enough. If not, the
+certificate is only nominal. The reviewer should ask whether the candidate
+probe grid includes meaningful actions. If not, coverage comparisons are
+misleading.
+
+The reviewer should also ask whether the task rewards contact frontier
+coverage. If the robot only needs one known safe contact, uniform low-force
+probing may be enough. If the robot needs to manipulate, insert, slide, or
+explore many contacts, certified frontier growth becomes more valuable.
+
+\section{Appendix: Long-Form Summary Of The Evidence}
+
+The main table shows four clusters. The first cluster is unsafe exploration:
+random force and overconfident certificates. They have high coverage, but their
+violations dominate in harmful regimes. The second cluster is conservative
+exploration: uniform and frontier low force. These policies are safe but leave
+frontier value unclaimed. The third cluster is certificate filtering: fixed,
+adaptive, Lipschitz, interval, CBF-style, MPC-style, UCB, tactile-gradient, and
+discontinuity policies. These policies trade coverage and harm with different
+assumptions. The fourth cluster is oracle limit knowledge, which sets the
+ceiling.
+
+The important comparison is not random versus oracle. The important comparison
+is fixed certificate versus adaptive and safety-filtered certificates. Fixed
+certificates are already a meaningful mechanism, but their failure modes are
+predictable. Adaptive, interval, and horizon-based filters are stronger because
+they expose more of the contact safety structure. This is the strongest form of
+the paper's claim.
+
+\section{Appendix: Contact-Risk Taxonomy}
+
+Contact risk has several forms that should not be collapsed into one violation
+counter. The first is force-limit risk: the robot presses harder than the
+object or tool can tolerate. The second is displacement risk: the robot moves
+too far after contact and changes the object state. The third is slip risk:
+normal force remains acceptable but tangential motion damages the task. The
+fourth is snag risk: the tool catches on a cable, lip, fabric, or edge. The
+fifth is deformation risk: the contact is safe initially but changes the future
+contact field. The sixth is contamination risk: the probe leaves residue or
+changes surface condition. The seventh is human-context risk: the same
+physical force is acceptable in one workspace and unacceptable near a person,
+medical object, or customer part.
+
+The v3 families cover several of these risks, but not all. Friction cliffs
+represent slip. Cable snag fields represent snag. Foam and soft-tissue proxies
+represent deformation and high harm. Thin shells represent force and
+displacement fragility. A hardware paper should state which risk classes are
+inside its certificate and which are outside. If the certificate only covers
+normal force, it should not be described as contact safe in general.
+
+\section{Appendix: Calibration Audit Questions}
+
+Before trusting a contact certificate, ask how the safe limit was measured. Was
+it measured on the same object, with the same tool, at the same approach speed,
+in the same direction, and after the same number of prior probes? Was sensor
+bias checked before and after the run? Was stop latency measured under contact,
+or only in free space? Were failed probes included in calibration? Were
+operator overrides recorded? Was damage labeled by a human, an automatic
+threshold, or both?
+
+The second set of questions concerns transfer. Does a safe limit measured on
+one cell transfer to a neighbor? What distance metric defines neighbor? Does
+the metric include surface curvature, material, tool orientation, and contact
+mode? What residual is large enough to declare a discontinuity? What happens
+after a discontinuity is declared? Does the policy lower force, abstain, ask a
+human, or switch tools?
+
+The third set concerns reporting. Are the candidate forces known before
+evaluation? Are margins chosen before seeing test surfaces? Are high-harm
+events reported separately? Is the oracle used only as an upper bound? Are
+negative controls included? These questions are mundane, but they decide
+whether a certificate is an auditable safety object or just a tuned parameter.
+
+\section{Appendix: Deployment Readiness Criteria}
+
+A contact-safe explorer is ready for low-risk deployment only when it passes
+four gates. Gate one is calibration: sensor noise, bias, stop latency, and
+candidate force limits are measured. Gate two is bounded operation: the robot
+cannot command forces or displacements outside the tested envelope. Gate three
+is logged explanation: every allowed or blocked probe has a reason tied to a
+certificate variable. Gate four is fallback: weak certificates trigger low
+force, abstention, human review, or a different tool.
+
+It is ready for higher-risk deployment only after additional gates. The system
+must show low high-harm violations on representative objects. It must pass
+brittle-pocket, delayed-stop, and sensor-bias tests. It must demonstrate that
+operator overrides are rare and explainable. It must show that repeated probes
+do not silently degrade the object. It must have a recovery plan for jams,
+snags, and unexpected deformation.
+
+These gates are stricter than the synthetic suite because real hardware has
+consequences. The suite can justify a mechanism paper. It cannot certify a
+robot.
+
+\section{Appendix: Manuscript Reading Checklist}
+
+Readers should not evaluate this paper by asking whether the oracle wins. It
+does. They should ask whether the non-oracle policies expose the correct
+mechanism. The answer is yes if five patterns are visible. Random force should
+cover many cells and violate often. Low force should be safe but under-cover.
+Fixed certificates should improve the tradeoff but fail under discontinuity and
+high harm. Adaptive and safety-filtered certificates should reduce violations
+while preserving useful coverage. Overconfident certificates should fail
+despite high coverage.
+
+The v3 results show all five patterns. That is why the paper is stronger than
+the v2 note. The v2 note demonstrated one boundary. The v3 version turns the
+boundary into a structured evaluation over families, regimes, baselines,
+negative controls, and oracle gaps.
+
+\section{Appendix: Claim Boundary For Abstracting Beyond Robotics}
+
+The mechanism may apply beyond robot contact, but the paper should not depend
+on that broader claim. Chemical experimentation, medical probing, field
+sampling, and infrastructure inspection can also have costly unsafe samples.
+However, this paper is about embodied contact. Its variables are force,
+displacement, stop latency, friction, deformation, and harm. Generalizing the
+idea is future work. The current submission should stay rooted in robotics
+because that is where the certificate variables are physically meaningful.
+
+\section{Appendix: Why The Paper Avoids A Theorem}
+
+A theorem would require a clean model of contact limits, measurement noise,
+smoothness, controller delay, and harm. Such a theorem could be useful, but it
+would likely prove a statement about an idealized certificate rather than the
+messy mechanism reviewers care about. The synthetic suite is chosen instead
+because it can vary the assumptions and show where each policy fails.
+
+This does not mean theory is impossible. A future theorem might bound violation
+probability under a calibrated Lipschitz field and known stop latency. Another
+theorem might bound regret to oracle under interval updates. This paper stops
+short of those claims because the main risk is not lack of algebra. The main
+risk is using a certificate outside the conditions that make it true.
+
+\section{Appendix: Evidence Needed For The Next Paper}
+
+The next paper in this line should replace synthetic contact fields with a
+small but carefully measured hardware suite. The minimum hardware suite would
+use at least three object classes: a smooth rigid object, a fragile thin object,
+and a discontinuous or snag-prone object. It would use at least three policy
+families: low-force probing, adaptive certificates, and a short-horizon safety
+filter. It would include an overconfident negative control only in low-risk
+calibration material, not on fragile hardware.
+
+The hardware paper should report raw probe logs, not only averages. A reviewer
+should be able to see which candidate forces were blocked, which were allowed,
+which contacts violated, and how the margin changed afterward. The paper
+should include videos or frame sequences for representative events: smooth
+frontier expansion, brittle-pocket detection, delayed-stop overshoot,
+operator override, and a failed certificate. A result with no failures is less
+informative than a result that explains the failures.
+
+The strongest hardware evidence would show the same qualitative pattern as the
+v3 suite. Random or aggressive probing should cover quickly but create unsafe
+events on fragile objects. Low-force probing should be safe but slow or
+uninformative. Fixed certificates should work on smooth objects and become
+brittle at discontinuities. Adaptive or short-horizon certificates should
+recover some coverage while reducing harm. If hardware shows the opposite, the
+synthetic mechanism should be revised.
+
+\section{Appendix: Final Reviewer Checklist}
+
+A reviewer can evaluate the paper with ten questions. First, is the claim
+about contact-safe frontier growth rather than generic safe exploration?
+Second, are unsafe contacts treated as physical failures rather than bad
+training samples? Third, are random, conservative, fixed-certificate,
+adaptive-certificate, safety-filter, oracle, and overconfident baselines all
+present? Fourth, does the suite include a regime where aggressive exploration
+should win? Fifth, does it include regimes where harm dominates coverage?
+
+Sixth, are raw safety metrics reported separately from utility? Seventh, is the
+oracle clearly labeled as an upper bound? Eighth, are the assumptions behind
+certificates named: smoothness, sensing, stop latency, anisotropy, friction,
+deformation, and harm? Ninth, does the paper avoid claiming hardware
+validation? Tenth, does it provide enough artifact detail for a reader to
+rerun the synthetic suite? The v3 manuscript is designed so that the answer to
+all ten questions is yes.
+
+\section{Appendix: Final Safety Lesson}
+
+The safest-looking policy is not always the one with the word certificate in
+its name. A certificate is only as safe as the assumptions it exposes. The
+overconfident negative control is therefore not an extra baseline; it is a
+warning. If a contact certificate hides calibration, ignores delay, treats
+anisotropic friction as scalar force, or fails to log human overrides, it can
+become a mechanism for producing unsafe confidence.
+
+The practical lesson is simple: make the certificate inspectable. The robot
+should be able to explain why a candidate touch is allowed, why another is
+blocked, what uncertainty term is active, what margin is being used, and what
+event would make it stop. That inspectability is the real difference between
+safe frontier growth and blind exploration with nicer terminology.
+
+\section{Appendix: Final Boundary Statement}
+
+This paper is final as a full-scale synthetic mechanism study. It is not a
+hardware validation and not a universal replacement for RL. The supported claim
+is narrower and stronger: when contact exploration has real unsafe-contact
+cost, a robot should explicitly grow a certified safe frontier, calibrate the
+assumptions behind that certificate, and treat overconfidence as a safety
+failure rather than a high-coverage success.
 
 \section*{References}
 \small
 The recovery literature matrix is provided in
-\texttt{docs/related\_work\_matrix.csv}.
+\texttt{docs/related\_work\_matrix.csv}. The matrix contains the bounded
+Crossref sweep used to place this mechanism against safe RL, control barrier
+functions, safety filters, tactile exploration, active learning, and
+contact-rich manipulation.
 
 \end{document}

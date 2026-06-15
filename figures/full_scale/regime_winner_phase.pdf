@@ -1,0 +1,79 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 470 260] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 2302 >>
+stream
+BT /F1 12 Tf 28.0 240.0 Td (Utility winner by operating regime) Tj ET
+0.480 0.350 0.680 rg 42.0 211.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 215.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 215.0 Td (smooth nominal) Tj ET
+BT /F1 8 Tf 255.0 215.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 195.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 199.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 199.0 Td (dense discontinuities) Tj ET
+BT /F1 8 Tf 255.0 199.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 179.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 183.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 183.0 Td (sparse catastrophic hazards) Tj ET
+BT /F1 8 Tf 255.0 183.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 163.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 167.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 167.0 Td (force sensor noise) Tj ET
+BT /F1 8 Tf 255.0 167.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 147.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 151.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 151.0 Td (sensor bias drift) Tj ET
+BT /F1 8 Tf 255.0 151.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 131.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 135.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 135.0 Td (delayed stop) Tj ET
+BT /F1 8 Tf 255.0 135.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 115.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 119.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 119.0 Td (anisotropic limits) Tj ET
+BT /F1 8 Tf 255.0 119.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 99.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 103.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 103.0 Td (friction shift) Tj ET
+BT /F1 8 Tf 255.0 103.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 83.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 87.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 87.0 Td (deformable memory) Tj ET
+BT /F1 8 Tf 255.0 87.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 67.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 71.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 71.0 Td (frontier value high) Tj ET
+BT /F1 8 Tf 255.0 71.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 51.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 55.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 55.0 Td (high harm weight) Tj ET
+BT /F1 8 Tf 255.0 55.0 Td (oracle limit map) Tj ET
+0.480 0.350 0.680 rg 42.0 35.0 14.0 14.0 re f
+BT /F1 8 Tf 46.0 39.0 Td (M) Tj ET
+BT /F1 8 Tf 66.0 39.0 Td (free safe control) Tj ET
+BT /F1 8 Tf 255.0 39.0 Td (oracle limit map) Tj ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+2665
+%%EOF

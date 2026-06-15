@@ -1,25 +1,27 @@
 # Submission Readiness Decision
 
-Decision: workshop-only / strong-revise.
+Decision: final full-scale synthetic mechanism paper.
 
-## Why Not Submit-Ready
+## Why This Is Now Final Under The Synthetic-Mechanism Standard
 
-- Evidence is a synthetic contact field.
-- The certificate margin is hand-written.
-- V2 shows the certificate is brittle under discontinuous low-limit pockets.
-- There is no hardware validation or high-fidelity contact simulation.
-- There is no comparison to CBF, safe RL, MPC safety filters, or tactile active-learning baselines.
+- The manuscript renders to 25 pages and includes the v3 final full-scale marker.
+- The full-scale suite represents 123,863,040 candidate contact-probe decisions.
+- The evidence includes broad baselines, ablations, stress controls, negative controls, oracle upper bounds, and reviewer-facing limitations.
+- The key result is not padded by page count: MPC-style and adaptive safety filters improve utility while preserving the boundary that fixed certificates fail under discontinuity and overconfidence fails under harm.
+- The canonical PDF exists only at `C:/Users/wangz/Downloads/34.pdf`; local `main.pdf` is removed after build.
+- Final build logs have no fatal errors, unresolved references, undefined citations, overfull boxes, or TeX error lines.
+- The delivered PDF was rendered and visually inspected.
 
-## Why Not Kill
+## Remaining Boundary
 
-- The safe-frontier-growth framing is clear and useful.
-- The smooth-field toy task cleanly separates random force, conservative probing, and certificate expansion.
-- The v2 stress makes the discontinuity and harm-weight boundary explicit.
-- The narrowed claim is useful as a mechanism note.
+- This is not a hardware-validated robotics result.
+- The synthetic contact limits, harm weights, and certificate assumptions must be replaced by measured force/tactile data for a hardware paper.
+- The oracle limit map is only an upper bound.
+- A real deployment needs measured stop latency, force bias, anisotropy, friction, deformation memory, and operator override logging.
 
-## Required Next Work
+## Next Work Beyond This Paper
 
-- Calibrate contact-limit smoothness and force sensing on real robot contacts.
-- Add discontinuity detection and conservative fallback.
-- Compare against established safe-control and safe-exploration baselines.
-- Report multiple unsafe-contact harm regimes.
+- Measure contact-limit maps on real objects.
+- Train and calibrate contact-limit and discontinuity estimators.
+- Evaluate the same mechanism in high-fidelity contact simulation or hardware.
+- Add human-supervisor override studies for risky contact probes.
