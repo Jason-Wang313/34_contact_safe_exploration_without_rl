@@ -2,8 +2,8 @@
   "version": "v3 final full-scale",
   "final_pdf": "C:/Users/wangz/Downloads/34.pdf",
   "final_pdf_pages": 25,
-  "final_pdf_size_bytes": 301379,
-  "final_pdf_sha256": "9243DFAC7F540DE2EED48E9FAFA89318B23030224572AE6912EC952EDCA19548",
+  "final_pdf_size_bytes": 346308,
+  "final_pdf_sha256": "1209B26370B1118689B8D53DFC6BCDC9B1A278E00C8B9877289D58A3C289E232",
   "local_paper_pdf_present_after_build": false,
   "build_status": "complete",
   "build_log_serious_warning_count": 0,
@@ -15,7 +15,18 @@
     "417.8"
   ],
   "visual_render_verified": true,
-  "visual_render_method": "Rendered the final Downloads PDF with pdftoppm at 90 dpi and inspected all pages through contact sheets.",
+  "visual_render_method": "Rendered the final Downloads PDF link pages with pdftoppm at 150 dpi and inspected contact sheets plus page zooms.",
+  "vla_link_box_visual_hardening": {
+    "verified": true,
+    "link_pages": [[4, 2], [5, 1], [6, 1], [7, 1]],
+    "colors": {
+      "red": 5,
+      "green": 0,
+      "cyan": 0
+    },
+    "border": [0, 0, 1],
+    "note": "The manuscript has internal reference links only; green cite/url boxes are configured by hyperref policy but no cite/url link annotations are present."
+  },
   "experiment_scale": {
     "families": 10,
     "regimes": 12,

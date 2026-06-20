@@ -213,3 +213,7 @@ contact-field families, 12 regimes, 14 policies, 96 deterministic seeds, 192
 cells, 4 candidate probes per cell, and 123,863,040 represented candidate
 contact-probe decisions. The final manuscript rendered to 25 pages, was copied
 only to `C:/Users/wangz/Downloads/34.pdf`, and left no local `main.pdf`.
+On 2026-06-20, the final PDF was rebuilt with the VLA role-model hyperref box
+policy. The rebuilt artifact has SHA256
+`1209B26370B1118689B8D53DFC6BCDC9B1A278E00C8B9877289D58A3C289E232` and
+VLA-style one-point red internal link boxes on pages 4, 5, 6, and 7.

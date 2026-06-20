@@ -6,11 +6,12 @@ Paper 34 final v3 artifact for the robotics 60 batch.
 - Manuscript: `main.tex`
 - Canonical PDF: `C:/Users/wangz/Downloads/34.pdf`
 - Final PDF pages: 25
-- Final PDF SHA256: `9243DFAC7F540DE2EED48E9FAFA89318B23030224572AE6912EC952EDCA19548`
+- Final PDF SHA256: `1209B26370B1118689B8D53DFC6BCDC9B1A278E00C8B9877289D58A3C289E232`
 - Build command: `powershell -ExecutionPolicy Bypass -File scripts/build_pdf.ps1`
 - Full-scale runner: `python scripts/run_full_scale_contact_safe_suite.py`
 - Full-scale outputs: `results/full_scale/`
 - Figures: `figures/full_scale/`
+- Visual hardening: VLA-style one-point red internal link boxes verified on pages 4, 5, 6, and 7. The manuscript has no cite/url link annotations, so green cite/url boxes are configured but not artificially introduced.
 
 ## v3 Evidence
 
