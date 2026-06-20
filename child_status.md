@@ -25,8 +25,9 @@ V3 full-scale hardening time: 2026-06-15
 
 - Downloads PDF: `C:/Users/wangz/Downloads/34.pdf`
 - Pages: 25
-- Size: 301,379 bytes
-- SHA256: `9243DFAC7F540DE2EED48E9FAFA89318B23030224572AE6912EC952EDCA19548`
+- Size: 346,308 bytes
+- SHA256: `1209B26370B1118689B8D53DFC6BCDC9B1A278E00C8B9877289D58A3C289E232`
+- Latest visual hardening: VLA-style one-point red internal link boxes verified on pages 4, 5, 6, and 7; green cite/url border policy configured, with no cite/url annotations present in this manuscript.
 - Desktop PDF: absent
 - Local paper PDF: absent after final build
 - GitHub URL: `https://github.com/Jason-Wang313/34_contact_safe_exploration_without_rl`

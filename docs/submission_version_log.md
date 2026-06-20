@@ -11,6 +11,13 @@
 - Built the canonical PDF at `C:/Users/wangz/Downloads/34.pdf` and removed local `main.pdf`.
 - Verified final PDF page count, hash, text markers, build logs, and visual rendering.
 
+## v4 Visual Hardening - 2026-06-20
+
+- Added the VLA role-model `hyperref` box policy to `main.tex`.
+- Rebuilt the canonical Downloads PDF.
+- Verified 25 pages, size 346,308 bytes, SHA256 `1209B26370B1118689B8D53DFC6BCDC9B1A278E00C8B9877289D58A3C289E232`, and no local `main.pdf`.
+- Verified one-point red internal link boxes on pages 4, 5, 6, and 7, with no cyan boxes. The manuscript has no cite/url link annotations, so green cite/url boxes are configured but not present.
+
 ## v2 - 2026-06-13
 
 - Added discontinuous-contact stress generation to `scripts/recover_paper34.py`.

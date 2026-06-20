@@ -9,12 +9,13 @@
 - [x] Paper source is `main.tex`.
 - [x] Canonical PDF path is `C:/Users/wangz/Downloads/34.pdf`.
 - [x] Final PDF pages: 25.
-- [x] Final PDF SHA256: `9243DFAC7F540DE2EED48E9FAFA89318B23030224572AE6912EC952EDCA19548`.
+- [x] Final PDF SHA256: `1209B26370B1118689B8D53DFC6BCDC9B1A278E00C8B9877289D58A3C289E232`.
 - [x] Local `main.pdf` is removed after canonical copy.
 - [x] Visible Desktop PDF copies are absent.
 - [x] Final build status is recorded in `data/build_status.json`.
 - [x] Delivered PDF text markers were verified.
 - [x] Delivered PDF was rendered with `pdftoppm` and inspected visually.
+- [x] VLA-style link-box policy is configured in `main.tex`; final PDF has one-point red internal reference boxes and no cyan boxes.
 
 Recommended verification commands:
 

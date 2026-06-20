@@ -10,7 +10,7 @@ Decision: final full-scale synthetic mechanism paper.
 - The key result is not padded by page count: MPC-style and adaptive safety filters improve utility while preserving the boundary that fixed certificates fail under discontinuity and overconfidence fails under harm.
 - The canonical PDF exists only at `C:/Users/wangz/Downloads/34.pdf`; local `main.pdf` is removed after build.
 - Final build logs have no fatal errors, unresolved references, undefined citations, overfull boxes, or TeX error lines.
-- The delivered PDF was rendered and visually inspected.
+- The delivered PDF was rendered and visually inspected, including VLA-style red internal link boxes on pages 4, 5, 6, and 7.
 
 ## Remaining Boundary
 
